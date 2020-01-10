@@ -1,5 +1,5 @@
 (library
- (public_name gui)
+ (name gui)
  (wrapped false)
  (libraries
    lablgtk2
