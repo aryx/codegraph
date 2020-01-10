@@ -1,0 +1,12 @@
+(library
+ (public_name codegraph)
+ (wrapped false)
+ (libraries
+   lablgtk2
+   cairo2
+   cairo2-gtk
+
+   commons pfff-h_visualization gui
+   pfff-graph_code pfff-h_program-lang
+ )
+)

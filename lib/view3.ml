@@ -208,7 +208,7 @@ let mk_gui w =
         b#connect#clicked ~callback:(fun () -> 
           w.path <- Common2.list_init w.path;
           View_matrix.recompute_matrix w;
-        )
+        ) |> ignore;
       ));
       tb#insert_widget (G.mk (GMisc.label ~text:"#backward deps = 0") (fun lbl->
         Controller._label_settext := (fun s ->
