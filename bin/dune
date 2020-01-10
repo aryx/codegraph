@@ -1,5 +1,5 @@
 (executables
- (names main_codegraph)
+ (names main_codegraph main_codegraph_build)
  (libraries 
      bigarray
     threads          ;; needed for json-wheel (Condition?)
@@ -14,23 +14,28 @@
     pfff-h_program-lang
     pfff-graph_code
 
-;    pfff-lang_python pfff-lang_python-analyze
-;    pfff-lang_js pfff-lang_js-analyze
-;    pfff-lang_cpp 
-;    pfff-lang_c pfff-lang_c-analyze
-;    pfff-lang_ml pfff-lang_ml-analyze
-;    pfff-lang_java pfff-lang_java-analyze
-;    pfff-lang_php pfff-lang_php-analyze-foundation pfff-lang_php-analyze-checker
-;    pfff-lang_lisp
-;    
     codegraph
+
+    ; for codegraph_build
+    pfff-lang_python pfff-lang_python-analyze
+    pfff-lang_js pfff-lang_js-analyze
+    pfff-lang_cpp 
+    pfff-lang_c pfff-lang_c-analyze
+    pfff-lang_ml pfff-lang_ml-analyze
+    pfff-lang_java pfff-lang_java-analyze
+    pfff-lang_php pfff-lang_php-analyze-foundation pfff-lang_php-analyze-checker
+    pfff-lang_lisp pfff-lang_lisp-analyze
+    pfff-lang_GENERIC    
+
  )
  ; for ocamldebug
  (modes byte)
 )
 
+
 (install
  (package codegraph)
  (section bin)
- (files (main_codegraph.exe as codegraph))
+ (files (main_codegraph.exe as codegraph) 
+        (main_codegraph_build.exe as codegraph_build))
 )
