@@ -1,0 +1,324 @@
+{
+  "nodes": [
+    {
+      "name_kind": [ "T__ushort", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    {
+      "name_kind": [ "T__u32int", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    {
+      "name_kind": [ "T__uchar", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    { "name_kind": [ "union.c", "File" ], "location": "union.c" },
+    {
+      "name_kind": [ "foofn__8", "Function" ],
+      "location":
+        "/home/pad/github/pfff/tests/c/codegraph/static_proto_typedef.c"
+    },
+    {
+      "name_kind": [ "T__FooFn", "Type" ],
+      "location":
+        "/home/pad/github/pfff/tests/c/codegraph/static_proto_typedef.c"
+    },
+    {
+      "name_kind": [ "T__Param", "Type" ],
+      "location":
+        "/home/pad/github/pfff/tests/c/codegraph/static_proto_typedef.c"
+    },
+    {
+      "name_kind": [ "S__Param", "Type" ],
+      "location":
+        "/home/pad/github/pfff/tests/c/codegraph/static_proto_typedef.c"
+    },
+    {
+      "name_kind": [ "static_proto_typedef.c", "File" ],
+      "location": "static_proto_typedef.c"
+    },
+    { "name_kind": [ "other.h", "File" ], "location": "other.h" },
+    {
+      "name_kind": [ "main__7", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/main2.c"
+    },
+    { "name_kind": [ "main2.c", "File" ], "location": "main2.c" },
+    {
+      "name_kind": [ "main__6", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/main1.c"
+    },
+    { "name_kind": [ "main1.c", "File" ], "location": "main1.c" },
+    {
+      "name_kind": [ "use_global_bad", "Macro" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/macros.h"
+    },
+    {
+      "name_kind": [ "va_start", "Macro" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/macros.h"
+    },
+    { "name_kind": [ "macros.h", "File" ], "location": "macros.h" },
+    {
+      "name_kind": [ "sprint", "Prototype" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/libc.h"
+    },
+    { "name_kind": [ "libc.h", "File" ], "location": "libc.h" },
+    {
+      "name_kind": [ "ifdef", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/ifdef.c"
+    },
+    { "name_kind": [ "ifdef.c", "File" ], "location": "ifdef.c" },
+    {
+      "name_kind": [ "main__5", "Function" ],
+      "location":
+        "/home/pad/github/pfff/tests/c/codegraph/func_pointer_local.c"
+    },
+    {
+      "name_kind": [ "func_pointer_local.c", "File" ],
+      "location": "func_pointer_local.c"
+    },
+    {
+      "name_kind": [ "S__buf.n", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/forward.c"
+    },
+    {
+      "name_kind": [ "S__buf", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/forward.c"
+    },
+    {
+      "name_kind": [ "S__use_buf.a", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/forward.c"
+    },
+    {
+      "name_kind": [ "S__use_buf", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/forward.c"
+    },
+    { "name_kind": [ "forward.c", "File" ], "location": "forward.c" },
+    {
+      "name_kind": [ "S__bar.x", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/dupes.c"
+    },
+    {
+      "name_kind": [ "S__bar", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/dupes.c"
+    },
+    {
+      "name_kind": [ "T__foo", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/dupes.c"
+    },
+    { "name_kind": [ "dupes.c", "File" ], "location": "dupes.c" },
+    {
+      "name_kind": [ "printf", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/builtins.c"
+    },
+    { "name_kind": [ "builtins.c", "File" ], "location": "builtins.c" },
+    {
+      "name_kind": [ "xopen", "Prototype" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.h"
+    },
+    {
+      "name_kind": [ "buf", "GlobalExtern" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.h"
+    },
+    {
+      "name_kind": [ "cp", "Constant" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.h"
+    },
+    {
+      "name_kind": [ "NULL", "Constant" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.h"
+    },
+    { "name_kind": [ "basic.h", "File" ], "location": "basic.h" },
+    {
+      "name_kind": [ "xopen", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.c"
+    },
+    {
+      "name_kind": [ "X_FOO2__4", "Constructor" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.c"
+    },
+    {
+      "name_kind": [ "X_FOO1__3", "Constructor" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.c"
+    },
+    {
+      "name_kind": [ "E__X", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.c"
+    },
+    {
+      "name_kind": [ "S__x.b", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.c"
+    },
+    {
+      "name_kind": [ "S__x.a", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.c"
+    },
+    {
+      "name_kind": [ "S__x", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.c"
+    },
+    {
+      "name_kind": [ "foo", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.c"
+    },
+    {
+      "name_kind": [ "use_libc", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/use.c"
+    },
+    {
+      "name_kind": [ "buf", "Global" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.c"
+    },
+    {
+      "name_kind": [ "use_struct_x", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/use.c"
+    },
+    {
+      "name_kind": [ "FOOBAR__2", "Macro" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.c"
+    },
+    {
+      "name_kind": [ "S__y.a", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/use.c"
+    },
+    {
+      "name_kind": [ "FOO__1", "Constant" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/basic.c"
+    },
+    {
+      "name_kind": [ "S__y", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/use.c"
+    },
+    { "name_kind": [ "basic.c", "File" ], "location": "basic.c" },
+    {
+      "name_kind": [ "bar", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/use.c"
+    },
+    {
+      "name_kind": [ "g", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/algo/ex_dsm.c"
+    },
+    {
+      "name_kind": [ "FOOBAR__10", "Macro" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/use.c"
+    },
+    {
+      "name_kind": [ "f", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/algo/ex_dsm.c"
+    },
+    {
+      "name_kind": [ "FOO__9", "Constant" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/use.c"
+    },
+    {
+      "name_kind": [ "e", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/algo/ex_dsm.c"
+    },
+    { "name_kind": [ "use.c", "File" ], "location": "use.c" },
+    {
+      "name_kind": [ "d", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/algo/ex_dsm.c"
+    },
+    {
+      "name_kind": [ "S____anon_struct_2.version", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    {
+      "name_kind": [ "c", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/algo/ex_dsm.c"
+    },
+    {
+      "name_kind": [ "S____anon_struct_2.msize", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    {
+      "name_kind": [ "b", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/algo/ex_dsm.c"
+    },
+    {
+      "name_kind": [ "S____anon_struct_2", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    {
+      "name_kind": [ "a", "Function" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/algo/ex_dsm.c"
+    },
+    {
+      "name_kind": [ "S____anon_struct_3.oldtag", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    { "name_kind": [ "algo/ex_dsm.c", "File" ], "location": "algo/ex_dsm.c" },
+    {
+      "name_kind": [ "S____anon_struct_3", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    { "name_kind": [ "algo", "Dir" ], "location": "UNKNOWN LOCATION" },
+    {
+      "name_kind": [ "U____anon_struct_1", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    { "name_kind": [ "DUPE", "Dir" ], "location": "UNKNOWN LOCATION" },
+    {
+      "name_kind": [ "S__Fcall.tag", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    { "name_kind": [ "NOT_FOUND", "Dir" ], "location": "UNKNOWN LOCATION" },
+    {
+      "name_kind": [ "S__Fcall.fid", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    { "name_kind": [ "PB", "Dir" ], "location": "UNKNOWN LOCATION" },
+    {
+      "name_kind": [ "S__Fcall.type", "Field" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    },
+    { "name_kind": [ ".", "Dir" ], "location": "UNKNOWN LOCATION" },
+    {
+      "name_kind": [ "S__Fcall", "Type" ],
+      "location": "/home/pad/github/pfff/tests/c/codegraph/union.c"
+    }
+  ],
+  "edges_Use": [
+    { "src": [ "foofn__8", "Function" ], "dst": [ "S__Param", "Type" ] },
+    { "src": [ "main__7", "Function" ], "dst": [ "foo", "Function" ] },
+    { "src": [ "main__6", "Function" ], "dst": [ "foo", "Function" ] },
+    { "src": [ "main__5", "Function" ], "dst": [ "NULL", "Constant" ] },
+    { "src": [ "S__buf.n", "Field" ], "dst": [ "S__use_buf", "Type" ] },
+    { "src": [ "S__use_buf.a", "Field" ], "dst": [ "S__buf", "Type" ] },
+    { "src": [ "use_libc", "Function" ], "dst": [ "sprint", "Prototype" ] },
+    {
+      "src": [ "use_struct_x", "Function" ],
+      "dst": [ "printf", "Function" ]
+    },
+    { "src": [ "use_struct_x", "Function" ], "dst": [ "S__x", "Type" ] },
+    { "src": [ "S__y.a", "Field" ], "dst": [ "S__x", "Type" ] },
+    { "src": [ "bar", "Function" ], "dst": [ "FOOBAR__10", "Macro" ] },
+    { "src": [ "bar", "Function" ], "dst": [ "FOO__9", "Constant" ] },
+    { "src": [ "bar", "Function" ], "dst": [ "cp", "Constant" ] },
+    { "src": [ "bar", "Function" ], "dst": [ "foo", "Function" ] },
+    { "src": [ "g", "Function" ], "dst": [ "c", "Function" ] },
+    { "src": [ "g", "Function" ], "dst": [ "b", "Function" ] },
+    { "src": [ "f", "Function" ], "dst": [ "g", "Function" ] },
+    { "src": [ "f", "Function" ], "dst": [ "e", "Function" ] },
+    { "src": [ "f", "Function" ], "dst": [ "c", "Function" ] },
+    { "src": [ "d", "Function" ], "dst": [ "g", "Function" ] },
+    { "src": [ "d", "Function" ], "dst": [ "a", "Function" ] },
+    { "src": [ "c", "Function" ], "dst": [ "e", "Function" ] },
+    { "src": [ "c", "Function" ], "dst": [ "a", "Function" ] },
+    { "src": [ "b", "Function" ], "dst": [ "d", "Function" ] },
+    { "src": [ "b", "Function" ], "dst": [ "c", "Function" ] },
+    { "src": [ "a", "Function" ], "dst": [ "c", "Function" ] },
+    {
+      "src": [ "U____anon_struct_1", "Type" ],
+      "dst": [ "S____anon_struct_2", "Type" ]
+    },
+    {
+      "src": [ "U____anon_struct_1", "Type" ],
+      "dst": [ "S____anon_struct_3", "Type" ]
+    },
+    {
+      "src": [ "S__Fcall", "Type" ],
+      "dst": [ "U____anon_struct_1", "Type" ]
+    }
+  ],
+  "edges_Has": "TODO"
+}

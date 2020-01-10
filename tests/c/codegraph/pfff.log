@@ -1,0 +1,9 @@
+
+step0: parsing
+
+step1: extract defs
+you should factorize struct S__bar definitions
+
+step2: extract Uses
+
+step3: adjusting
