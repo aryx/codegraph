@@ -1,10 +1,11 @@
 (executables
  (names main_codegraph main_codegraph_build)
  (libraries 
-     bigarray
+    bigarray
     threads          ;; needed for json-wheel (Condition?)
     json-wheel       ;; Json_io, Json_type
     ocamlgraph
+    dyp
 
     commons commons_core
     pfff-commons-graph
