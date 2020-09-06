@@ -7,6 +7,9 @@
     ocamlgraph
     dyp
 
+    compiler-libs ;; for lang_cmt 
+    compiler-libs.common
+
     commons commons_core
     pfff-commons-graph
 
@@ -27,6 +30,8 @@
     pfff-lang_php pfff-lang_php-analyze-foundation pfff-lang_php-analyze-checker
     pfff-lang_lisp pfff-lang_lisp-analyze
     pfff-lang_GENERIC    
+
+    pfff-lang_cmt pfff-lang_cmt-analyze
 
  )
  ; for ocamldebug

@@ -58,6 +58,18 @@ let set_gc () =
   Gc.set { (Gc.get()) with Gc.space_overhead = 300 };
   ()
 
+let find_source__files_of_dir_or_files ~lang xs = 
+  match lang with
+  | "cmt"  -> 
+    Lib_parsing_ml.find_cmt_files_of_dir_or_files xs
+  | _ -> Find_source.files_of_dir_or_files ~lang xs
+
+let find_source__files_of_root ~lang root = 
+  match lang with
+  | "cmt"  -> 
+    Lib_parsing_ml.find_cmt_files_of_dir_or_files [root]
+  | _ -> Find_source.files_of_root ~lang root
+
 (*****************************************************************************)
 (* Building stdlib *)
 (*****************************************************************************)
@@ -83,10 +95,10 @@ let main_action xs =
   let root, files = 
     match xs with
     | [root] -> 
-        root, Find_source.files_of_root ~lang root
+        root, find_source__files_of_root ~lang root
     | _ ->
         let root = Common2.common_prefix_of_files_or_dirs xs in
-        let files = Find_source.files_of_dir_or_files ~lang xs in
+        let files = find_source__files_of_dir_or_files ~lang xs in
         root, files
   in
 
@@ -123,6 +135,14 @@ let main_action xs =
 
     | "dot" -> 
       Graph_code.graph_of_dotfile (Filename.concat root "graph.dot"), empty
+
+(*#if FEATURE_CMT*)
+    | "cmt"  -> 
+          let ml_files = Find_source.files_of_root ~lang:"ml" root in
+          let cmt_files = files in
+          Graph_code_cmt.build ~verbose:!verbose ~root ~cmt_files ~ml_files, 
+          empty
+(*#endif*)
 
     | _ -> failwith ("language not supported: " ^ lang)
     )
