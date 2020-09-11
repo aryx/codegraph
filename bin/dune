@@ -1,9 +1,7 @@
 (executables
  (names main_codegraph main_codegraph_build)
  (libraries 
-    bigarray
-    threads          ;; needed for json-wheel (Condition?)
-    json-wheel       ;; Json_io, Json_type
+    str bigarray
     ocamlgraph
     dyp
 

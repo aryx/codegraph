@@ -9,6 +9,7 @@ module GC = Graph_code
 module GC2 = Graph_code_opti
 module DM = Dependencies_matrix_code
 module DMBuild = Dependencies_matrix_build
+module J = JSON
 
 (*****************************************************************************)
 (* Purpose *)
@@ -386,7 +387,7 @@ let extra_actions () = [
     let json = Graph_code_export.graph_to_json g in
     let dst = "graph_code.json" in
     pr2 (spf "saving graph in JSON format in %s" dst);
-    Json_io.string_of_json ~compact:false ~recursive:false ~allow_nan:true json
+    J.string_of_json ~compact:false ~recursive:false ~allow_nan:true json
      |> Common.write_file ~file:dst
   );
 
