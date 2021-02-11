@@ -25,7 +25,7 @@
     pfff-lang_c pfff-lang_c-analyze
     pfff-lang_ml pfff-lang_ml-analyze
     pfff-lang_java pfff-lang_java-analyze
-    pfff-lang_php pfff-lang_php-analyze pfff-lang_php-checker
+    pfff-lang_php pfff-lang_php-analyze
     pfff-lang_lisp pfff-lang_lisp-analyze
     pfff-lang_GENERIC    
 
