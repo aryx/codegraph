@@ -11,6 +11,8 @@ module DM = Dependencies_matrix_code
 module DMBuild = Dependencies_matrix_build
 module J = JSON
 
+let logger = Logging.get_logger [__MODULE__]
+
 (*****************************************************************************)
 (* Purpose *)
 (*****************************************************************************)
@@ -38,6 +40,8 @@ let output_dir = ref None
 let gen_derived_data = ref false
 (* not perfect ... *)
 let class_analysis = ref false
+
+let log_config_file = ref "log_config.json"
 
 (* action mode *)
 let action = ref ""
@@ -471,6 +475,25 @@ let main () =
       (Filename.basename Sys.argv.(0))
       "https://github.com/facebook/pfff/wiki/Codegraph"
   in
+
+   let handler = Easy_logging.(Handlers.make (CliErr Debug))
+     (*
+     match config.log_to_file with
+     | None -> Easy_logging.(Handlers.make (CliErr Debug))
+     | Some file -> Easy_logging.(Handlers.make (File (file, Debug)))
+      *)
+   in
+   Logging.apply_to_all_loggers (fun logger -> logger#add_handler handler);
+   Logging.(set_global_level Info);
+
+                                                                           
+  if Sys.file_exists !log_config_file
+  then begin
+    Logging.load_config_file !log_config_file;
+    logger#info "loaded %s" !log_config_file;
+  end;
+
+  
   (* does side effect on many global flags *)
   let args = Common.parse_options (options()) usage_msg Sys.argv in
 

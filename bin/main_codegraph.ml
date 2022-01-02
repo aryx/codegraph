@@ -11,14 +11,17 @@ module DMBuild = Dependencies_matrix_build
 module Model = Model3
 module View = View3
 
+let logger = Logging.get_logger [__MODULE__]
+
 (*****************************************************************************)
 (* Purpose *)
 (*****************************************************************************)
-(* 
- * This is the main entry point of codegraph, a package/module/type/function/...
+(* This is the main entry point of Codegraph, a package/module/type/function/...
  * hierarchical dependency visualizer using mainly a Dependency
- * Structure Matrix (DSM). This should help understand the "software
- * architecture" of a project and assist in refactoring it.
+ * Structure Matrix (DSM). 
+ *
+ * This should help understand the "software architecture" of a project
+ * and assist in refactoring it.
  * A node-link display of hierarchical graphs (or hypergraphs) would be nice
  * too, but it is far more complex to draw than matrices and does
  * not scale as well visually apparently.
@@ -30,7 +33,6 @@ module View = View3
  * important thing to do in a software project.
  * "Organizing complexity is the most important skill"
  * http://www.johndcook.com/blog/2015/06/18/most-important-skill-in-software/
- * 
  * 
  * It seems there are a few commercial projects using DSM (Ndepend,
  * Structure101, Intellij), so this looks like a viable direction to pursue
@@ -182,6 +184,8 @@ let deps_style = ref DM.DepsInOut
  * gtk-font-name = "DejaVu Sans 16"
  *)
 
+let log_config_file = ref "log_config.json"
+
 (* action mode *)
 let action = ref ""
 
@@ -285,7 +289,6 @@ let package_node xs =
  *)
 let main_action xs =
   set_gc ();
-  Logger.log Config_pfff.logger "codegraph" None;
   let _locale = GtkMain.Main.init () in
 
   let dir = 
@@ -359,7 +362,6 @@ let main_action xs =
 (* Extra Actions *)
 (*****************************************************************************)
 
-  
 (* ---------------------------------------------------------------------- *)
 let extra_actions () = [
 
@@ -422,6 +424,13 @@ let main () =
       (Filename.basename Sys.argv.(0))
       "https://github.com/facebook/pfff/wiki/Codegraph"
   in
+
+  if Sys.file_exists !log_config_file
+  then begin
+    Logging.load_config_file !log_config_file;
+    logger#info "loaded %s" !log_config_file;
+  end;
+  
   (* does side effect on many global flags *)
   let args = Common.parse_options (options()) usage_msg Sys.argv in
 
