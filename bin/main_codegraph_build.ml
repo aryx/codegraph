@@ -145,7 +145,7 @@ let main_action xs =
     | "cmt"  -> 
           let ml_files = Find_source.files_of_root ~lang:"ml" root in
           let cmt_files = files in
-          Graph_code_cmt.build ~verbose:!verbose ~root ~cmt_files ~ml_files, 
+          Graph_code_cmt.build ~root ~cmt_files ~ml_files, 
           empty
 (*#endif*)
 
@@ -157,9 +157,9 @@ let main_action xs =
   in
   let output_dir = !output_dir ||| root in
   let file = dep_file_of_dir output_dir in
-  Graph_code.save g file;
   Graph_code.print_statistics stats g;
-  Common.pr2 (spf "Saving codegraph file in %s" file);
+  logger#info "Saving codegraph file in %s" file;
+  Graph_code.save g file;
 
   (* Save also TAGS, light db, prolog (TODO), layers. We could also do
    * that on demand when we run codemap and there is only a 
@@ -431,6 +431,7 @@ let extra_actions () = [
 
 let all_actions () = 
   extra_actions () @
+  Test_parsing_cmt.actions () @
   []
 
 let options () = [
@@ -476,6 +477,7 @@ let main () =
       "https://github.com/facebook/pfff/wiki/Codegraph"
   in
 
+(*
    let handler = Easy_logging.(Handlers.make (CliErr Debug))
      (*
      match config.log_to_file with
@@ -484,8 +486,8 @@ let main () =
       *)
    in
    Logging.apply_to_all_loggers (fun logger -> logger#add_handler handler);
-   Logging.(set_global_level Info);
-
+   (* Logging.(set_global_level Info); *)
+*)
                                                                            
   if Sys.file_exists !log_config_file
   then begin
