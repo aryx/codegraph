@@ -2,7 +2,7 @@
  * instead.
 *)
 
-open Common
+let logger = Logging.get_logger [__MODULE__]
 
 let finder lang =
   match lang with
@@ -47,7 +47,7 @@ let files_of_root ~lang root =
   let skip_list =
     if Sys.file_exists (skip_file root)
     then begin
-      pr2 (spf "Using skip file: %s (for lang = %s)" (skip_file root) lang);
+      logger#info "Using skip file: %s (for lang = %s)" (skip_file root) lang;
       Skip_code.load (skip_file root);
     end
     else []
