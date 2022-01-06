@@ -1,0 +1,3 @@
+[submodule "pfff-bytecode"]
+	path = pfff-bytecode
+	url = https://github.com/aryx/pfff-bytecode.git
