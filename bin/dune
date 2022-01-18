@@ -27,8 +27,8 @@
     pfff-lang_java pfff-lang_java-analyze
     pfff-lang_php pfff-lang_php-analyze
     pfff-lang_lisp pfff-lang_lisp-analyze
-    pfff-lang_GENERIC_base
-
+    pfff-lang_GENERIC_base pfff-lang_GENERIC_graph
+    ; in pfff-bytecode/
     pfff-lang_cmt pfff-lang_cmt-analyze
 
  )

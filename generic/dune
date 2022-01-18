@@ -1,0 +1,25 @@
+; TODO: move in semgrep-core/src/analyzing/ at some point or in deep-semgrep
+
+; Try to not add too many dependencies in this directory. This library
+; could be used in projects such as codecheck, codemap, efuns,
+; which rely on this pfff-lang_... name and rely on small dependencies.
+(library
+ (public_name pfff-lang_GENERIC_graph)
+ (name pfff_lang_GENERIC_graph)
+ (wrapped false)
+ (libraries
+   commons
+   pfff-h_program-lang
+   pfff-graph_code
+
+   pfff-lang_GENERIC_base ; AST_generic.ml
+   pfff-lang_GENERIC ; the xxx_to_generic.ml
+   pfff-lang_GENERIC-analyze ; Naming_AST.ml
+ )
+ (preprocess
+    (pps
+      ppx_profiling
+      ppx_deriving.show
+    )
+ )
+)

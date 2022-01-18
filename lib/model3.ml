@@ -37,7 +37,7 @@ type model = {
    * Moreover we now tend to modify gopti and so having a g
    * out of sync with the gopti is bad.
    *)
-  g_deprecated: Graph_code.graph; 
+  g_deprecated: Graph_code.t; 
   (* we dynamically modify the optimized graph to add some intermediate
    * 'a/b/...' directories
    *)
