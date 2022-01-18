@@ -103,7 +103,7 @@ let main_action xs =
          let files = Find_generic.files_of_root lang root in
          let xs = files |> List.map (fun file ->
             logger#info "parsing %s" file;
-            file, Parse_generic.parse_program lang file) in
+            file, Parse_generic.parse_and_resolve_name lang file) in
          Graph_code_AST.build ~root lang xs
     | None ->
        (match !lang_str with
