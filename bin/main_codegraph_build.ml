@@ -33,7 +33,7 @@ let logger = Logging.get_logger [__MODULE__]
 
 let verbose = ref false
 
-let lang = ref "ml"
+let lang_str = ref "ml"
 
 let output_dir = ref None
 (* generate also tags, light db, layers, etc. *)
@@ -63,18 +63,6 @@ let set_gc () =
   Gc.set { (Gc.get()) with Gc.space_overhead = 300 };
   ()
 
-let find_source__files_of_dir_or_files ~lang xs = 
-  match lang with
-  | "cmt"  -> 
-    Lib_parsing_ml.find_cmt_files_of_dir_or_files xs
-  | _ -> Find_source.files_of_dir_or_files ~lang xs
-
-let find_source__files_of_root ~lang root = 
-  match lang with
-  | "cmt"  -> 
-    Lib_parsing_ml.find_cmt_files_of_dir_or_files [root]
-  | _ -> Find_source.files_of_root ~lang root
-
 (*****************************************************************************)
 (* Building stdlib *)
 (*****************************************************************************)
@@ -93,37 +81,46 @@ let build_stdlib lang root dst =
 (*****************************************************************************)
 
 let main_action xs =
-  set_gc ();
-  let lang = !lang in
 
   let xs = List.map Common.fullpath xs in
-  let root, files = 
+
+  (* codegraph_build was more flexible in allowing to pass
+   * multiple dirs, but this can be done with a skip_list anyway.
+   * old: let root = Common2.common_prefix_of_files_or_dirs xs in
+   *      root, find_source__files_of_dir_or_files ~lang xs
+   *)
+  let root = 
     match xs with
-    | [root] -> 
-        root, find_source__files_of_root ~lang root
-    | _ ->
-        let root = Common2.common_prefix_of_files_or_dirs xs in
-        let files = find_source__files_of_dir_or_files ~lang xs in
-        root, files
+    | [root] -> root
+    | _ -> failwith "too many arguments, we just need one root directory"
   in
 
   let empty = Graph_code.empty_statistics () in
   let g, stats =
     try (
-    match lang with
-    | "ml"  -> Graph_code_ml.build ~verbose:!verbose root files, empty
-    | "lisp" -> Graph_code_lisp.build ~verbose:!verbose root files, empty
-
-    | "c" -> 
+    match Lang.lang_of_string_opt !lang_str with
+    | Some lang -> 
+         let files = Find_generic.files_of_root lang root in
+         let xs = files |> List.map (fun file ->
+            file, Parse_generic.parse_program lang file) in
+         Graph_code_AST.build ~root lang xs
+    | None ->
+       (match !lang_str with
+    | "ml_old"  -> 
+        let files = Find_source.files_of_root ~lang:"ml" root in
+        Graph_code_ml.build ~verbose:!verbose root files, empty
+    | "c_old" -> 
+        let files = Find_source.files_of_root ~lang:"c" root in
         Parse_cpp.init_defs !Flag_parsing_cpp.macros_h;
         let local = Filename.concat root "pfff_macros.h" in
         if Sys.file_exists local
         then Parse_cpp.add_defs local;
         Graph_code_c.build ~verbose:!verbose root files, empty
-
-    | "java" -> Graph_code_java.build ~verbose:!verbose root files, empty
-
-    | "php" -> 
+    | "java_old" -> 
+        let files = Find_source.files_of_root ~lang:"java" root in
+        Graph_code_java.build ~verbose:!verbose root files, empty
+    | "php_old" -> 
+        let files = Find_source.files_of_root ~lang:"php" root in
       (* todo: better factorize *)
       let skip_file = Filename.concat root "skip_list.txt" in
       let skip_list =
@@ -136,21 +133,26 @@ let main_action xs =
         ~verbose:!verbose ~is_skip_error_file 
         ~class_analysis:!class_analysis
         root files
-    | "js" -> Graph_code_js.build ~verbose:!verbose root files, empty
+    | "js_old" -> 
+        let files = Find_source.files_of_root ~lang:"js" root in
+        Graph_code_js.build ~verbose:!verbose root files, empty
 
+    | "lisp" -> 
+        let files = Find_source.files_of_root ~lang:"lisp" root in
+        Graph_code_lisp.build ~verbose:!verbose root files, empty
     | "dot" -> 
-      Graph_code.graph_of_dotfile (Filename.concat root "graph.dot"), empty
+         Graph_code.graph_of_dotfile (Filename.concat root "graph.dot"), empty
 
 (*#if FEATURE_CMT*)
     | "cmt"  -> 
           let ml_files = Find_source.files_of_root ~lang:"ml" root in
-          let cmt_files = files in
+          let cmt_files = Find_source.files_of_root ~lang:"cmt" root in
           Graph_code_cmt.build ~root ~cmt_files ~ml_files, 
           empty
 (*#endif*)
 
-    | _ -> failwith ("language not supported: " ^ lang)
-    )
+    | _ -> failwith ("language not supported: " ^ !lang_str)
+    ))
     with (Graph_code.Error err) as exn ->
       pr2 (Graph_code.string_of_error err);
       raise exn
@@ -396,7 +398,7 @@ let extra_actions () = [
   );
 
   "-build_stdlib", " <src> <dst>",
-  Common.mk_action_2_arg (fun dir dst -> build_stdlib !lang dir dst);
+  Common.mk_action_2_arg (fun dir dst -> build_stdlib !lang_str dir dst);
   "-adjust_graph", " <graph> <adjust_file> <whitelist> <dstfile>\n",
   Common.mk_action_4_arg (fun graph file file2 dst -> 
     adjust_graph graph file file2 dst);
@@ -435,8 +437,8 @@ let all_actions () =
   []
 
 let options () = [
-  "-lang", Arg.Set_string lang, 
-  (spf " <str> choose language (default = %s) " !lang);
+  "-lang", Arg.Set_string lang_str, 
+  (spf " <str> choose language (default = %s) " !lang_str);
   "-o", Arg.String (fun s -> output_dir := Some s), 
   " <dir> save graph_code.marshall in another dir";
   "-derived_data", Arg.Set gen_derived_data, 
@@ -476,7 +478,7 @@ let main () =
       (Filename.basename Sys.argv.(0))
       "https://github.com/facebook/pfff/wiki/Codegraph"
   in
-
+  set_gc ();
 (*
    let handler = Easy_logging.(Handlers.make (CliErr Debug))
      (*

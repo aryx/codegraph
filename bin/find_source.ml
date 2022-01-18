@@ -1,11 +1,11 @@
-(* UPDATE: this is mostly obsolete. You should use Lang.files_of_dirs_or_files
- * instead.
-*)
+(* UPDATE: this is mostly obsolete. You should use Find_target.ml instead. *)
 
 let logger = Logging.get_logger [__MODULE__]
 
 let finder lang =
   match lang with
+
+  (* in pfff *)
   | "php" | "phpfuzzy" | "php2" ->
       Lib_parsing_php.find_source_files_of_dir_or_files ~verbose:false ~include_hack:false
   | "hack" ->
@@ -25,6 +25,11 @@ let finder lang =
   | "lisp" ->
       Lib_parsing_lisp.find_source_files_of_dir_or_files
   | "dot" -> (fun _ -> [])
+
+  (* in pfff-bytecode *)
+  | "cmt"  -> 
+    Lib_parsing_ml.find_cmt_files_of_dir_or_files
+
   | _ -> failwith ("Find_source: unsupported language: " ^ lang)
 
 let skip_file dir =
