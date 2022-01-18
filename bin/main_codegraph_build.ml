@@ -102,6 +102,7 @@ let main_action xs =
     | Some lang -> 
          let files = Find_generic.files_of_root lang root in
          let xs = files |> List.map (fun file ->
+            logger#info "parsing %s" file;
             file, Parse_generic.parse_program lang file) in
          Graph_code_AST.build ~root lang xs
     | None ->
@@ -479,17 +480,16 @@ let main () =
       "https://github.com/facebook/pfff/wiki/Codegraph"
   in
   set_gc ();
-(*
-   let handler = Easy_logging.(Handlers.make (CliErr Debug))
-     (*
-     match config.log_to_file with
-     | None -> Easy_logging.(Handlers.make (CliErr Debug))
-     | Some file -> Easy_logging.(Handlers.make (File (file, Debug)))
-      *)
+
+  let handler = Easy_logging.(Handlers.make (CliErr Debug))
+  (*
+  match config.log_to_file with
+  | None -> Easy_logging.(Handlers.make (CliErr Debug))
+  | Some file -> Easy_logging.(Handlers.make (File (file, Debug)))
+   *)
    in
    Logging.apply_to_all_loggers (fun logger -> logger#add_handler handler);
-   (* Logging.(set_global_level Info); *)
-*)
+   Logging.(set_global_level Info);
                                                                            
   if Sys.file_exists !log_config_file
   then begin
