@@ -1,0 +1,47 @@
+(* Yoann Padioleau
+ *
+ * Copyright (C) 2012 Facebook
+ * Copyright (C) 2022 r2c
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * version 2.1 as published by the Free Software Foundation, with the
+ * special exception on linking described in file license.txt.
+ *
+ * This library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the file
+ * license.txt for more details.
+ *)
+
+module E = Entity_code
+module G = Graph_code
+
+module AST = AST_generic
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* The environment used in Graph_code_AST.ml
+ *)
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+type env = {
+  g: Graph_code.t;
+
+  phase: phase;
+  current: Graph_code.node;
+}
+
+(* We need 2 phases:
+ * - one to get all the definitions
+ * - one to get all the Uses.
+ *
+ * - still? one to get the inheritance information, 
+ * The inheritance is a kind of use, but certain uses like using
+ * a field needs the full inheritance tree to already be computed
+ * as we may need to lookup entities up in the parents.
+*)
+and phase = Defs (* still? | Inheritance *) | Uses

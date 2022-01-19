@@ -1,33 +1,4 @@
-(* Yoann Padioleau
- *
- * Copyright (C) 2012 Facebook
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License
- * version 2.1 as published by the Free Software Foundation, with the
- * special exception on linking described in file license.txt.
- *
- * This library is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the file
- * license.txt for more details.
-*)
-open Common
-
-module E = Entity_code
-module G = Graph_code
-
-open Ast_java
-module Ast = Ast_java
-module PI = Parse_info
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
 (*
- * Graph of dependencies for Java. See graph_code.ml and main_codegraph.ml
- * for more information.
- *
  * choices:
  *  - package-based or dir-based schema? Seems simpler to use packages.
  *  - merge overloaded methods? yes, alternative is to mangle the
@@ -65,14 +36,7 @@ module PI = Parse_info
  *
  *)
 
-(*****************************************************************************)
-(* Types *)
-(*****************************************************************************)
 type env = {
-  g: Graph_code.t;
-
-  phase: phase;
-  current: Graph_code.node;
   current_qualifier: Ast_java.qualified_ident;
 
   (* import x.y.* => [["x";"y"]; ...] *)
@@ -93,38 +57,13 @@ type env = {
   type_parameters: string list;
 }
 
-(* We need 3 phases, one to get all the definitions, one to
- * get the inheritance information, and one to get all the Uses.
- * The inheritance is a kind of use, but certain uses like using
- * a field needs the full inheritance tree to already be computed
- * as we may need to lookup entities up in the parents.
-*)
-and phase = Defs | Inheritance | Uses
-
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
-let parse ~show_parse_error file =
-  try
-    Parse_java.parse_program file
-  with
-  | Timeout _ as e -> raise e
-  | exn ->
-      if show_parse_error
-      then pr2_once (spf "PARSE ERROR with %s, exn = %s" file
-                       (Common.exn_to_s exn));
-      []
-
-
-let str_of_qualified_ident xs =
-  xs |> List.map Ast.unwrap |> Common.join "."
-
-let _str_of_name xs =
+let str_of_name xs =
   xs |> List.map (fun (_tyarg_todo, ident) -> Ast.unwrap ident) |>
   Common.join "."
-
-let unbracket (_, x, _) = x
 
 (* helper to build entries in env.params_or_locals *)
 let p_or_l v =
@@ -156,71 +95,7 @@ let rec classname_and_info_of_typ t =
       let (ident, _args) = x in
       ident
 
-(* quite similar to create_intermediate_directories_if_not_present *)
-let create_intermediate_packages_if_not_present g root xs =
-  let dirs = Common2.inits xs |> List.map str_of_qualified_ident in
-  let dirs =
-    match dirs with
-    | ""::xs -> xs
-    | _ -> raise Impossible
-  in
 
-  let rec aux current xs =
-    match xs with
-    | [] -> ()
-    | x::xs ->
-        let entity = x, E.Package in
-        if G.has_node entity g
-        then aux entity xs
-        else begin
-          g |> G.add_node entity;
-          g |> G.add_edge (current, entity) G.Has;
-          aux entity xs
-        end
-  in
-  aux root dirs
-
-let add_use_edge env (name, kind) =
-  let src = env.current in
-  let dst = (name, kind) in
-  (match () with
-   | _ when not (G.has_node src env.g) ->
-       pr2 (spf "LOOKUP SRC FAIL %s --> %s, src does not exist???"
-              (G.string_of_node src) (G.string_of_node dst));
-
-   | _ when G.has_node dst env.g ->
-       G.add_edge (src, dst) G.Use env.g
-
-   | _ ->
-       (match kind with
-        | _ ->
-            let kind_original = kind in
-            let dst = (name, kind_original) in
-            let parent_target = G.not_found in
-            (match kind_original with
-             | E.Package ->
-                 let fake_package =
-                   (Common.split "\\." name) |> List.map (fun s -> s^"2") in
-                 let dst = (Common.join "." fake_package, kind_original) in
-                 if not (G.has_node dst env.g)
-                 then begin
-                   create_intermediate_packages_if_not_present
-                     env.g parent_target
-                     (fake_package |> List.map (fun s -> s,()));
-                   pr2 (spf "PB: lookup fail on %s (in %s)"
-                          (G.string_of_node dst) (G.string_of_node src));
-                 end;
-                 env.g |> G.add_edge (src, dst) G.Use;
-                 ()
-             | _ ->
-                 pr2 (spf "PB: lookup fail on %s (in %s)"
-                        (G.string_of_node dst) (G.string_of_node src));
-                 G.add_node dst env.g;
-                 env.g |> G.add_edge (parent_target, dst) G.Has;
-                 env.g |> G.add_edge (src, dst) G.Use;
-            )
-       )
-  )
 
 (*****************************************************************************)
 (* Class/Package Lookup *)
@@ -403,11 +278,6 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
 (* Declarations (classes, fields, etc) *)
 (* ---------------------------------------------------------------------- *)
 and decl env = function
-  | Class def, _ -> class_decl env def
-  | Method def, _ -> method_decl env def
-  | Field def, _ -> field_decl env def
-  | Enum def, _ -> enum_decl env def
-  | DeclEllipsis _, _-> ()
   | Init (_is_static, st), n ->
       let name = spf "__init__%d" n in
       let full_ident = env.current_qualifier @ [name, fakeInfo name] in
@@ -423,8 +293,6 @@ and decl env = function
                 }
       in
       stmt env st
-  | EmptyDecl _, _ -> ()
-  | AnnotationTypeElementTodo _, _ -> raise Todo
 
 and decls env xs = List.iter (decl env) (Common.index_list_1 xs)
 
@@ -587,24 +455,6 @@ and enum_decl env def =
 (* ---------------------------------------------------------------------- *)
 (* mostly boilerplate, control constructs don't introduce entities *)
 and stmt env = function
-  | EmptyStmt _ -> ()
-  | Block (_, xs, _) -> stmts env xs
-  | Expr (e, _) -> expr env e
-  | If (_, e, st1, st2) ->
-      expr env e;
-      stmts env (st1::(Common.opt_to_list st2))
-  | Switch (_, e, xs) ->
-      expr env e;
-      xs |> List.iter (fun (cs, sts) ->
-        cases env cs;
-        stmts env sts
-      )
-  | While (_, e, st) ->
-      expr env e;
-      stmt env st;
-  | Do (_, st, e) ->
-      expr env e;
-      stmt env st;
   | For (_, x, st) ->
       let env =
         match x with
@@ -635,27 +485,6 @@ and stmt env = function
       in
       stmt env st;
 
-      (* could have an entity and dependency ... but it's intra procedural
-       * so not that useful
-      *)
-  | Label (_id, st) -> stmt env st
-  | Break (_, _idopt) | Continue (_, _idopt) -> ()
-  | Return (_, eopt) -> exprs env (Common2.option_to_list eopt)
-  | Sync (e, st) ->
-      expr env e;
-      stmt env st;
-  | Try (_, _resourcesTODO, st, xs, stopt) ->
-      stmt env st;
-      catches env xs;
-      stopt |> Common.do_option (fun (_, st) -> stmt env st);
-  | Throw (_, e) -> expr env e
-  | Assert (_, e, eopt) ->
-      exprs env (e::Common2.option_to_list eopt)
-  (* The modification of env.params_locals is done in decls() *)
-  | LocalVar f -> field env f
-  | DeclStmt x -> decl env (x, 0)
-  | DirectiveStmt _ -> raise Todo
-
 and stmts env xs =
   let rec aux env = function
     | [] -> ()
@@ -673,19 +502,12 @@ and stmts env xs =
   in
   aux env xs
 
-and cases env xs = List.iter (case env) xs
-and case env = function
-  | Case (_, e) -> expr env e
-  | Default _ -> ()
 
-and catches env xs = List.iter (catch env) xs
 and catch env (_, catch_exn, st) =
   match catch_exn with
   | CatchParam (v, _uniontypes) ->
       var env v;
       let env = { env with params_or_locals = p_or_l v :: env.params_or_locals } in
-      stmt env st
-  | CatchEllipsis _ ->
       stmt env st
 
 (* ---------------------------------------------------------------------- *)
@@ -736,10 +558,6 @@ and expr env = function
         )
       end
 *)
-  | NameOrClassType _ -> ()
-  | Literal _ -> ()
-
-  | ClassLiteral (t, _) -> typ env t
   | NewClass (tok, t, (_, args, _), decls_opt) ->
       typ env t;
       exprs env args;
@@ -772,14 +590,6 @@ and expr env = function
       (* todo: need to resolve the type of 'e' *)
       expr env (NewClass (tok, ty, args, decls_opt))
 
-  | NewArray (_tok, t, args, _i, ini_opt) ->
-      typ env t;
-      exprs env args;
-      init_opt env ini_opt
-
-  | Call (e, (_, es, _)) ->
-      expr env e;
-      exprs env es
   | Dot (e, _t, _idTODO) ->
       (* todo: match e, and try lookup method/field
        * if e is a Name, lookup it, and if a class then
@@ -787,36 +597,6 @@ and expr env = function
        * lookup its node, and then lookup children.
       *)
       expr env e;
-
-  | ArrayAccess (e1, (_, e2, _)) -> exprs env [e1;e2]
-  | Postfix (e, _) | Prefix (_, e) | Unary (_, e) -> expr env e
-  | Infix (e1, _op, e2) -> exprs env [e1;e2]
-  | Conditional (e1, e2, e3) -> exprs env [e1;e2;e3]
-  | SwitchE (_tok, e, _cases) -> expr env e
-  | AssignOp (e1, _op, e2) -> exprs env [e1;e2]
-  | Assign (e1, _tok, e2) -> exprs env [e1;e2]
-  | TypedMetavar (_ident, _typ) -> ()
-
-  | Cast ((_,t,_), e) ->
-      List.iter (typ env) t;
-      expr env e
-  | InstanceOf (e, tref) ->
-      expr env e;
-      typ env (tref);
-  | Ellipsis _ | DeepEllipsis _ | ObjAccessEllipsis _ -> ()
-  | Lambda (_params, _t, _st) -> raise Todo (* imitate method_decl code *)
-  | MethodRef _ -> raise Todo
-
-
-and exprs env xs = List.iter (expr env) xs
-and init env = function
-  | ExprInit e -> expr env e
-  | ArrayInit xs -> List.iter (init env) (unbracket xs)
-and init_opt env opt =
-  match opt with
-  | None -> ()
-  | Some ini -> init env ini
-
 (* ---------------------------------------------------------------------- *)
 (* Types *)
 (* ---------------------------------------------------------------------- *)
@@ -859,58 +639,3 @@ and typ env = function
              )
         )
       end
-
-(* ---------------------------------------------------------------------- *)
-(* Misc *)
-(* ---------------------------------------------------------------------- *)
-and var env v =
-  Common.do_option (typ env) v.type_;
-  ()
-
-and field env f =
-  var env f.f_var;
-  init_opt env f.f_init;
-  ()
-
-(*****************************************************************************)
-(* Main entry point *)
-(*****************************************************************************)
-
-let build ?(verbose=true) ?(only_defs=false) root files =
-  let g = G.create () in
-  G.create_initial_hierarchy g;
-
-  let lookup_fails = Common2.hash_with_default (fun () -> 0) in
-
-  (* step1: creating the nodes and 'Has' edges, the defs *)
-  if verbose then pr2 "\nstep1: extract defs";
-  files |> Console.progress ~show:verbose (fun k ->
-    List.iter (fun file ->
-      k();
-      let readable = Common.readable ~root file in
-      let ast = parse ~show_parse_error:true file in
-      extract_defs_uses ~phase:Defs ~g ~ast ~readable ~lookup_fails;
-    ));
-  if not only_defs then begin
-
-    (* step2: creating the 'Use' edges just for inheritance *)
-    if verbose then pr2 "\nstep2: extract inheritance information";
-    files |> Console.progress ~show:verbose (fun k ->
-      List.iter (fun file ->
-        k();
-        let readable = Common.readable ~root file in
-        let ast = parse ~show_parse_error:false file in
-        extract_defs_uses ~phase:Inheritance ~g ~ast ~readable ~lookup_fails;
-      ));
-
-    (* step3: creating the 'Use' edges that can rely on recursive inheritance *)
-    if verbose then pr2 "\nstep3: extract uses";
-    files |> Console.progress ~show:verbose (fun k ->
-      List.iter (fun file ->
-        k();
-        let readable = Common.readable ~root file in
-        let ast = parse ~show_parse_error:false file in
-        extract_defs_uses ~phase:Uses ~g ~ast ~readable ~lookup_fails;
-      ));
-  end;
-  g

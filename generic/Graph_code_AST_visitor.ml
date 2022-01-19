@@ -148,6 +148,9 @@ and
 (*****************************************************************************)
 
 and map_expr env { e = v_e; e_id = v_e_id; e_range = v_e_range } =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v_e_range =
     map_of_option
       (fun (v1, v2) ->
@@ -159,6 +162,10 @@ and map_expr env { e = v_e; e_id = v_e_id; e_range = v_e_range } =
   let v_e = map_expr_kind env v_e in todo env ()
 and map_expr_kind env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
+
   | L v1 -> let v1 = map_literal env v1 in todo env (v1)
   | Container ((v1, v2)) ->
       let v1 = map_container_operator env v1
@@ -262,6 +269,9 @@ and map_expr_kind env =
       in todo env (v1, v2)
 and map_literal env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | Bool v1 -> let v1 = map_wrap env map_of_bool v1 in todo env (v1)
   | Int v1 ->
       let v1 = map_wrap env (map_of_option map_of_int) v1 in todo env (v1)
@@ -282,27 +292,26 @@ and map_literal env =
   | Undefined v1 -> let v1 = map_tok env v1 in todo env (v1)
   | Imag v1 -> let v1 = map_wrap env map_of_string v1 in todo env (v1)
   | Ratio v1 -> let v1 = map_wrap env map_of_string v1 in todo env (v1)
-and map_const_type env =
-  function | Cbool -> Cbool | Cint -> Cint | Cstr -> Cstr | Cany -> Cany
+and map_const_type env _ = ()
 and map_svalue env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | Lit v1 -> let v1 = map_literal env v1 in todo env (v1)
   | Cst v1 -> let v1 = map_const_type env v1 in todo env (v1)
   | Sym v1 -> let v1 = map_expr env v1 in todo env (v1)
   | NotCst -> NotCst
-and map_container_operator env =
-  function
-  | Array -> Array
-  | List -> List
-  | Set -> Set
-  | Dict -> Dict
-  | Tuple -> Tuple
+and map_container_operator _env _ = ()
 and map_comprehension env (v1, v2) =
   let v1 = map_expr env v1
   and v2 = map_of_list (map_for_or_if_comp env) v2
   in (v1, v2)
 and map_for_or_if_comp env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | CompFor ((v1, v2, v3, v4)) ->
       let v1 = map_tok env v1
       and v2 = map_pattern env v2
@@ -313,10 +322,16 @@ and map_for_or_if_comp env =
       let v1 = map_tok env v1 and v2 = map_expr env v2 in todo env (v1, v2)
 and map_field_name env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | FN v1 -> let v1 = map_name env v1 in todo env (v1)
   | FDynamic v1 -> let v1 = map_expr env v1 in todo env (v1)
 and map_special env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | This -> This
   | Super -> Super
   | Self -> Self
@@ -345,8 +360,8 @@ and map_special env =
              in (v1, v2))
       in todo env (v1)
 and map_operator env _ = ()
-and map_incr_decr env = function | Incr -> Incr | Decr -> Decr
-and map_prefix_postfix env = function | Prefix -> Prefix | Postfix -> Postfix
+and map_incr_decr env _ = ()
+and map_prefix_postfix env _ = ()
 and map_concat_string_kind env _ = ()
 and
   map_xml env
@@ -355,11 +370,17 @@ and
             xml_attrs = v_xml_attrs;
             xml_body = v_xml_body
           } =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v_xml_body = map_of_list (map_xml_body env) v_xml_body in
   let v_xml_attrs = map_of_list (map_xml_attribute env) v_xml_attrs in
   let v_xml_kind = map_xml_kind env v_xml_kind in todo env ()
 and map_xml_kind env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | XmlClassic ((v1, v2, v3, v4)) ->
       let v1 = map_tok env v1
       and v2 = map_ident env v2
@@ -375,6 +396,9 @@ and map_xml_kind env =
       let v1 = map_tok env v1 and v2 = map_tok env v2 in todo env (v1, v2)
 and map_xml_attribute env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | XmlAttr ((v1, v2, v3)) ->
       let v1 = map_ident env v1
       and v2 = map_tok env v2
@@ -386,6 +410,9 @@ and map_xml_attribute env =
 and map_a_xml_attr_value env v = map_expr env v
 and map_xml_body env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | XmlText v1 -> let v1 = map_wrap env map_of_string v1 in todo env (v1)
   | XmlExpr v1 ->
       let v1 = map_bracket env (map_of_option (map_expr env)) v1
@@ -394,6 +421,9 @@ and map_xml_body env =
 and map_arguments env v = map_bracket env (map_of_list (map_argument env)) v
 and map_argument env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | Arg v1 -> let v1 = map_expr env v1 in todo env (v1)
   | ArgKwd ((v1, v2)) ->
       let v1 = map_ident env v1 and v2 = map_expr env v2 in todo env (v1, v2)
@@ -409,6 +439,7 @@ and map_argument env =
 (* Statement *)
 (*****************************************************************************)
 
+(* mostly boilerplate, control constructs don't introduce entities *)
 and
   map_stmt env
            {
@@ -419,6 +450,9 @@ and
              s_strings = v_s_strings;
              s_range = v_s_range
            } =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v_s_range =
     map_of_option
       (fun (v1, v2) ->
@@ -435,6 +469,9 @@ and
   let v_s = map_stmt_kind env v_s in todo env ()
 and map_stmt_kind env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | ExprStmt ((v1, v2)) ->
       let v1 = map_expr env v1 and v2 = map_sc env v2 in todo env (v1, v2)
   | Block v1 ->
@@ -486,6 +523,9 @@ and map_stmt_kind env =
       and v2 = map_label_ident env v2
       and v3 = map_sc env v3
       in todo env (v1, v2, v3)
+  (* could have an entity and dependency ... but it's intra procedural
+   * so not that useful
+   *)
   | Label ((v1, v2)) ->
       let v1 = map_label env v1 and v2 = map_stmt env v2 in todo env (v1, v2)
   | Goto ((v1, v2, v3)) ->
@@ -514,6 +554,8 @@ and map_stmt_kind env =
       and v2 = map_arguments env v2
       and v3 = map_sc env v3
       in todo env (v1, v2, v3)
+
+  (* TODO The modification of env.params_locals is done in decls() *)
   | DefStmt v1 -> let v1 = map_definition env v1 in todo env (v1)
   | DirectiveStmt v1 -> let v1 = map_directive env v1 in todo env (v1)
   | DisjStmt ((v1, v2)) ->
@@ -529,6 +571,9 @@ and map_stmt_kind env =
       in todo env (v1, v2)
 and map_condition env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | Cond v1 -> let v1 = map_expr env v1 in todo env (v1)
   | OtherCond ((v1, v2)) ->
       let v1 = map_todo_kind env v1
@@ -536,6 +581,9 @@ and map_condition env =
       in todo env (v1, v2)
 and map_case_and_body env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | CasesAndBody v1 ->
       let v1 =
         (match v1 with
@@ -547,6 +595,9 @@ and map_case_and_body env =
   | CaseEllipsis v1 -> let v1 = map_tok env v1 in todo env (v1)
 and map_case env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | Case ((v1, v2)) ->
       let v1 = map_tok env v1
       and v2 = map_pattern env v2
@@ -567,6 +618,9 @@ and map_catch env (v1, v2, v3) =
   in (v1, v2, v3)
 and map_catch_exn env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | CatchPattern v1 -> let v1 = map_pattern env v1 in todo env (v1)
   | CatchParam v1 -> let v1 = map_parameter_classic env v1 in todo env (v1)
   | OtherCatch ((v1, v2)) ->
@@ -578,12 +632,18 @@ and map_finally env (v1, v2) =
 and map_label env v = map_ident env v
 and map_label_ident env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | LNone -> LNone
   | LId v1 -> let v1 = map_label env v1 in todo env (v1)
   | LInt v1 -> let v1 = map_wrap env map_of_int v1 in todo env (v1)
   | LDynamic v1 -> let v1 = map_expr env v1 in todo env (v1)
 and map_for_header env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | ForClassic ((v1, v2, v3)) ->
       let v1 = map_of_list (map_for_var_or_expr env) v1
       and v2 = map_of_option (map_expr env) v2
@@ -601,6 +661,9 @@ and map_for_header env =
   | ForEllipsis v1 -> let v1 = map_tok env v1 in todo env (v1)
 and map_for_var_or_expr env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | ForInitVar ((v1, v2)) ->
       let v1 = map_entity env v1
       and v2 = map_variable_definition env v2
@@ -615,6 +678,9 @@ and map_other_stmt_operator env _ = ()
 
 and map_pattern env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | PatLiteral v1 -> let v1 = map_literal env v1 in todo env (v1)
   | PatConstructor ((v1, v2)) ->
       let v1 = map_name env v1
@@ -686,6 +752,9 @@ and map_type_ env { t = v_t; t_attrs = v_t_attrs } =
   let v_t = map_type_kind env v_t in todo env ()
 and map_type_kind env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | TyN v1 -> let v1 = map_name env v1 in todo env (v1)
   | TyApply ((v1, v2)) ->
       let v1 = map_type_ env v1
@@ -736,6 +805,9 @@ and map_type_arguments env v =
   map_bracket env (map_of_list (map_type_argument env)) v
 and map_type_argument env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | TA v1 -> let v1 = map_type_ env v1 in todo env (v1)
   | TAWildcard ((v1, v2)) ->
       let v1 = map_tok env v1
@@ -759,6 +831,9 @@ and map_type_argument env =
 
 and map_attribute env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | KeywordAttr v1 ->
       let v1 = map_wrap env (map_keyword_attribute env) v1 in todo env (v1)
   | NamedAttr ((v1, v2, v3)) ->
@@ -784,6 +859,9 @@ and map_entity env { name = v_name; attrs = v_attrs; tparams = v_tparams } =
   let v_name = map_entity_name env v_name in todo env ()
 and map_entity_name env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | EN v1 -> let v1 = map_name env v1 in todo env (v1)
   | EDynamic v1 -> let v1 = map_expr env v1 in todo env (v1)
   | EPattern v1 -> let v1 = map_pattern env v1 in todo env (v1)
@@ -793,6 +871,9 @@ and map_entity_name env =
       in todo env (v1, v2)
 and map_definition_kind env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | FuncDef v1 -> let v1 = map_function_definition env v1 in todo env (v1)
   | VarDef v1 -> let v1 = map_variable_definition env v1 in todo env (v1)
   | FieldDefColon v1 ->
@@ -811,6 +892,9 @@ and map_definition_kind env =
       in todo env (v1, v2)
 and map_type_parameter env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | TP v1 -> let v1 = map_type_parameter_classic env v1 in todo env (v1)
   | TParamEllipsis v1 -> let v1 = map_tok env v1 in todo env (v1)
   | OtherTypeParam ((v1, v2)) ->
@@ -826,6 +910,9 @@ and
                                tp_default = v_tp_default;
                                tp_variance = v_tp_variance
                              } =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v_tp_variance =
     map_of_option (map_wrap env (map_variance env)) v_tp_variance in
   let v_tp_default = map_of_option (map_type_ env) v_tp_default in
@@ -847,6 +934,9 @@ and
                             frettype = v_frettype;
                             fbody = v_fbody
                           } =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v_fbody = map_function_body env v_fbody in
   let v_frettype = map_of_option (map_type_ env) v_frettype in
   let v_fparams = map_parameters env v_fparams in
@@ -855,6 +945,9 @@ and map_function_kind env _ = ()
 and map_parameters env v = map_of_list (map_parameter env) v
 and map_parameter env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | Param v1 -> let v1 = map_parameter_classic env v1 in todo env (v1)
   | ParamPattern v1 -> let v1 = map_pattern env v1 in todo env (v1)
   | ParamRest ((v1, v2)) ->
@@ -879,6 +972,9 @@ and
                           pattrs = v_pattrs;
                           pinfo = v_pinfo
                         } =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v_pinfo = map_id_info env v_pinfo in
   let v_pattrs = map_of_list (map_attribute env) v_pattrs in
   let v_pdefault = map_of_option (map_expr env) v_pdefault in
@@ -886,6 +982,9 @@ and
   let v_pname = map_of_option (map_ident env) v_pname in todo env ()
 and map_function_body env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | FBStmt v1 -> let v1 = map_stmt env v1 in todo env (v1)
   | FBExpr v1 -> let v1 = map_expr env v1 in todo env (v1)
   | FBDecl v1 -> let v1 = map_sc env v1 in todo env (v1)
@@ -896,6 +995,9 @@ and map_function_body env =
 (* ------------------------------------------------------------------------- *)
 
 and map_variable_definition env { vinit = v_vinit; vtype = v_vtype } =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v_vtype = map_of_option (map_type_ env) v_vtype in
   let v_vinit = map_of_option (map_expr env) v_vinit in todo env ()
 
@@ -908,6 +1010,9 @@ and map_type_definition env { tbody = v_tbody } =
   let v_tbody = map_type_definition_kind env v_tbody in todo env ()
 and map_type_definition_kind env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | OrType v1 ->
       let v1 = map_of_list (map_or_type_element env) v1 in todo env (v1)
   | AndType v1 ->
@@ -926,6 +1031,9 @@ and map_type_definition_kind env =
       in todo env (v1, v2)
 and map_or_type_element env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | OrConstructor ((v1, v2)) ->
       let v1 = map_ident env v1
       and v2 = map_of_list (map_type_ env) v2
@@ -944,6 +1052,9 @@ and map_or_type_element env =
 (* ------------------------------------------------------------------------- *)
 
 and map_field env =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   function | F v1 -> let v1 = map_stmt env v1 in todo env (v1)
 
 
@@ -961,19 +1072,20 @@ and
                          cparams = v_cparams;
                          cbody = v_cbody
                        } =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v_cbody = map_bracket env (map_of_list (map_field env)) v_cbody in
   let v_cparams = map_parameters env v_cparams in
   let v_cmixins = map_of_list (map_type_ env) v_cmixins in
   let v_cimplements = map_of_list (map_type_ env) v_cimplements in
   let v_cextends = map_of_list (map_class_parent env) v_cextends in
   let v_ckind = map_wrap env (map_class_kind env) v_ckind in todo env ()
-and map_class_kind env =
-  function
-  | Class -> Class
-  | Interface -> Interface
-  | Trait -> Trait
-  | Object -> Object
+and map_class_kind env _ = ()
 and map_class_parent env (v1, v2) =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v1 = map_type_ env v1
   and v2 = map_of_option (map_arguments env) v2
   in (v1, v2)
@@ -985,6 +1097,9 @@ and map_class_parent env (v1, v2) =
 and
   map_enum_entry_definition env { ee_args = v_ee_args; ee_body = v_ee_body }
                             =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v_ee_body =
     map_of_option (map_bracket env (map_of_list (map_field env))) v_ee_body in
   let v_ee_args = map_of_option (map_arguments env) v_ee_args in todo env ()
@@ -997,6 +1112,9 @@ and map_module_definition env { mbody = v_mbody } =
   let v_mbody = map_module_definition_kind env v_mbody in todo env ()
 and map_module_definition_kind env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | ModuleAlias v1 -> let v1 = map_dotted_ident env v1 in todo env (v1)
   | ModuleStruct ((v1, v2)) ->
       let v1 = map_of_option (map_dotted_ident env) v1
@@ -1015,6 +1133,9 @@ and
   map_macro_definition env
                        { macroparams = v_macroparams; macrobody = v_macrobody
                        } =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v_macrobody = map_of_list (map_any env) v_macrobody in
   let v_macroparams = map_of_list (map_ident env) v_macroparams
   in todo env ()
@@ -1024,10 +1145,16 @@ and
 (*****************************************************************************)
 
 and map_directive env { d = v_d; d_attrs = v_d_attrs } =
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v_d_attrs = map_of_list (map_attribute env) v_d_attrs in
   let v_d = map_directive_kind env v_d in todo env ()
 and map_directive_kind env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | ImportFrom ((v1, v2, v3, v4)) ->
       let v1 = map_tok env v1
       and v2 = map_module_name env v2
@@ -1071,10 +1198,14 @@ and map_program env v = map_of_list (map_item env) v
 (* Partial/any *)
 (*****************************************************************************)
 
+(* Partials appear only in Semgrep patterns, not in target files *)
 and map_partial env _ = raise Impossible
 
 and map_any env =
   function
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   | E v1 -> let v1 = map_expr env v1 in todo env (v1)
   | S v1 -> let v1 = map_stmt env v1 in todo env (v1)
   | Ss v1 -> let v1 = map_of_list (map_stmt env) v1 in todo env (v1)
