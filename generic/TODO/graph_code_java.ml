@@ -37,8 +37,6 @@
  *)
 
 type env = {
-  current_qualifier: Ast_java.qualified_ident;
-
   (* import x.y.* => [["x";"y"]; ...] *)
   imported_namespace: (string list) list;
   (* import x.y.z => [("z", (false, ["x";"y";"z"])); ...] *)
@@ -69,11 +67,6 @@ let str_of_name xs =
 let p_or_l v =
   Ast.unwrap v.name, Ast.is_final v.mods
 
-(* TODO *)
-let _long_ident_of_name xs = List.map snd xs
-(* TODO *)
-let long_ident_of_class_type xs = List.map fst xs
-
 let nodeinfo ident =
   { G.pos = Parse_info.unsafe_token_location_of_info (Ast.info_of_ident ident);
     props = [];
@@ -94,8 +87,6 @@ let rec classname_and_info_of_typ t =
       let x = Common2.list_last xs in
       let (ident, _args) = x in
       ident
-
-
 
 (*****************************************************************************)
 (* Class/Package Lookup *)
@@ -176,8 +167,6 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
   ignore(lookup_fails);
 
   let env = {
-    g; phase;
-
     current =
       (match ast with
        | (DirectiveStmt (Package (_, long_ident, _)))::_ ->
@@ -189,8 +178,6 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
        | (DirectiveStmt (Package (_, long_ident, _)))::_ -> long_ident
        | _ -> []
       );
-    params_or_locals = [];
-    type_parameters = [];
     imported_namespace =
       (match ast with
        (* we automatically import the current.package.* *)
@@ -228,11 +215,7 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
     | (DirectiveStmt (Package (_, long_ident, _)))::_ ->
         create_intermediate_packages_if_not_present g G.root long_ident;
         (* have None usually for scripts, tests, or entry points *)
-    | _ ->
-        let dir = Common2.dirname readable in
-        G.create_intermediate_directories_if_not_present g dir;
-        g |> G.add_node (readable, E.File);
-        g |> G.add_edge ((dir, E.Dir), (readable, E.File))  G.Has;
+    | _ -> xxx
   end;
   (* double check if we can find some of the imports
    * (especially useful when have a better java_stdlib/ to report
@@ -342,21 +325,6 @@ and class_decl env def =
  * used multiple times.
 *)
 and method_decl env def =
-
-  let full_ident = env.current_qualifier @ [def.m_var.name] in
-  let full_str = str_of_qualified_ident full_ident in
-  let node = (full_str, E.Method) in
-  if env.phase = Defs then begin
-    (* less: static? *)
-    (* less: for now we just collapse all methods with same name together *)
-    if G.has_node (full_str, E.Method) env.g
-    then ()
-    else begin
-      env.g |> G.add_node node;
-      env.g |> G.add_nodeinfo node (nodeinfo def.m_var.name);
-      env.g |> G.add_edge (env.current, node) G.Has;
-    end
-  end;
   let env = { env with
               current = node;
               (* No change to the qualifier? methods are not a namespace?
@@ -379,13 +347,7 @@ and method_decl env def =
               type_parameters = [];
             }
   in
-  var env def.m_var;
-  def.m_formals |> List.iter (function
-    | ParamEllipsis _ -> ()
-    | ParamClassic v | ParamReceiver v | ParamSpread (_, v) -> var env v
-  );
-  (* todo: m_throws *)
-  stmt env def.m_body
+  xxx
 
 and field_decl env def =
   let full_ident = env.current_qualifier @ [def.f_var.name] in

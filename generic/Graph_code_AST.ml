@@ -12,6 +12,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the file
  * license.txt for more details.
  *)
+open Common
+module E = Entity_code
+module H = Graph_code_AST_helpers
+module L = Graph_code_AST_lookup
+module Lang_specific = Graph_code_AST_lang_specific
 
 let logger = Logging.get_logger [__MODULE__]
 
@@ -43,21 +48,44 @@ open Graph_code_AST_env
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-open Graph_code_AST_helpers
+(* See Graph_code_AST_helpers *)
 
 (*****************************************************************************)
 (* Lookup *)
 (*****************************************************************************)
-open Graph_code_AST_lookup
+(* see Graph_code_AST_lookup *)
 
 (*****************************************************************************)
 (* Visitor *)
 (*****************************************************************************)
 open Graph_code_AST_visitor
 
-let extract_defs_uses ~phase ~g ~ast ~readable =
+let extract_defs_uses ~phase ~g ~ast ~lang ~readable =
   ignore (phase, g, ast, readable);
-  failwith "TODO"
+
+  let current_parent, current_qualifier = 
+    Lang_specific.top_parent_and_qualifier ~lang ~readable ~ast in
+  
+  let env = {
+    g; phase;
+    current_parent;
+    current_qualifier;
+  } in
+
+  if phase = Defs then begin
+    (match current_parent with
+    | readable, E.File -> 
+        let dir = Common2.dirname readable in
+        G.create_intermediate_directories_if_not_present g dir;
+        g |> G.add_node (readable, E.File);
+        g |> G.add_edge ((dir, E.Dir), (readable, E.File))  G.Has;
+    | n -> 
+      failwith (spf "top parent not handled yet: %s" (G.string_of_node n))
+    );
+  end;
+  
+  map_program env ast |> ignore
+
 
 (*****************************************************************************)
 (* Entry point *)
@@ -68,7 +96,7 @@ let verbose = true
 (* TODO: to expensive to have all ASTs in memory? use lazy?
  * but then how to free memory between the 2 passes?
  *)
-let build ~root _lang xs =
+let build ~root lang xs =
   let g = G.create () in
   let stats = G.empty_statistics () in
   G.create_initial_hierarchy g;
@@ -82,7 +110,7 @@ let build ~root _lang xs =
      k();
      let readable = Common.readable ~root file in
      logger#info "readable: %s" readable;
-     extract_defs_uses ~phase:Defs ~g ~ast ~readable;
+     extract_defs_uses ~phase:Defs ~g ~ast ~lang ~readable;
    )   
   );
 
@@ -91,7 +119,7 @@ let build ~root _lang xs =
    List.iter (fun (file, ast) ->
      k();
      let readable = Common.readable ~root file in
-     extract_defs_uses ~phase:Uses ~g ~ast ~readable;
+     extract_defs_uses ~phase:Uses ~g ~ast ~lang ~readable;
    )   
   );
 

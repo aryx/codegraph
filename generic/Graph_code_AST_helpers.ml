@@ -15,14 +15,47 @@
  *)
 open Common
 open Graph_code_AST_env
+open AST_generic
 
 module E = Entity_code
 module G = Graph_code
-
 module AST = AST_generic
+
+let logger = Logging.get_logger [__MODULE__]
+
+(*****************************************************************************)
+(* Debugging helpers *)
+(*****************************************************************************)
+let string_of_any any =
+  let v = Meta_AST.vof_any any in
+  let s = OCaml.string_of_v v in
+  s
+
+(*****************************************************************************)
+(* AST generic accessors helpers *)
+(*****************************************************************************)
 
 let str_of_dotted_ident xs =
   xs |> List.map fst |> Common.join "."
+
+let ident_of_entity_opt _env ent =
+  match ent.name with
+  | EN (Id (id, _)) -> Some id
+  | _ -> None
+
+
+let entity_kind_of_definition_kind _env defkind =
+  match defkind with
+  | FuncDef _ -> E.Function (* less: could be also Method *)
+  | ClassDef _ -> E.Class
+  | _ -> 
+      logger#error "entity kind not handled yet: %s" 
+          (string_of_any (Dk defkind));
+      E.Other ("Todo")
+
+(*****************************************************************************)
+(* Graph builders helpers *)
+(*****************************************************************************)
 
 (* quite similar to create_intermediate_directories_if_not_present *)
 let create_intermediate_packages_if_not_present g root xs =
@@ -50,7 +83,7 @@ let create_intermediate_packages_if_not_present g root xs =
 
 
 let add_use_edge env (name, kind) =
-  let src = env.current in
+  let src = env.current_parent in
   let dst = (name, kind) in
   (match () with
    | _ when not (G.has_node src env.g) ->

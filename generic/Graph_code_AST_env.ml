@@ -29,10 +29,18 @@ module AST = AST_generic
 (* Types *)
 (*****************************************************************************)
 type env = {
+  (* this is modified by side effects *)
   g: Graph_code.t;
 
   phase: phase;
-  current: Graph_code.node;
+
+  (* the parent to connect to when creating new nodes *)
+  current_parent: Graph_code.node;
+  (* the current "scope", everthing that is enclosing the current code.
+   * less: no support for functors or complex modules *)
+  current_qualifier: AST.dotted_ident;
+
+
 }
 
 (* We need 2 phases:

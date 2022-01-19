@@ -14,6 +14,8 @@
  *)
 open Common
 open AST_generic
+module H = Graph_code_AST_helpers
+open Graph_code_AST_env
 
 (*****************************************************************************)
 (* Prelude *)
@@ -38,15 +40,16 @@ let map_of_list = Common.map
 
 let map_token_location _env _x = ()
 
-let todo _env _x =
-  failwith "TODO"
+(* this used to be called todo() by the boilerplate generator *)
+let nothing _env _x =
+  ()
 
 (*****************************************************************************)
 (* Token (leaf) *)
 (*****************************************************************************)
 
 let map_tok env v = 
-  todo env v
+  nothing env v
   
 let map_wrap env _of_a (v1, v2) =
   let v1 = _of_a v1 and v2 = map_tok env v2 in (v1, v2)
@@ -71,31 +74,31 @@ let map_dotted_ident env v = map_of_list (map_ident env) v
   
 let map_module_name env =
   function
-  | DottedName v1 -> let v1 = map_dotted_ident env v1 in todo env (v1)
-  | FileName v1 -> let v1 = map_wrap env map_of_string v1 in todo env (v1)
+  | DottedName v1 -> let v1 = map_dotted_ident env v1 in nothing env (v1)
+  | FileName v1 -> let v1 = map_wrap env map_of_string v1 in nothing env (v1)
   
 let rec map_sid env v = map_of_int v
 and map_resolved_name env (v1, v2) =
   let v1 = map_resolved_name_kind env v1 and v2 = map_sid env v2 in (v1, v2)
 and map_resolved_name_kind env =
   function
-  | Global -> Global
-  | LocalVar -> LocalVar
-  | Parameter -> Parameter
-  | EnclosedVar -> EnclosedVar
-  | ImportedEntity v1 -> let v1 = map_dotted_ident env v1 in todo env (v1)
-  | ImportedModule v1 -> let v1 = map_module_name env v1 in todo env (v1)
-  | TypeName -> TypeName
-  | Macro -> Macro
-  | EnumConstant -> EnumConstant
+  | Global -> ()
+  | LocalVar -> ()
+  | Parameter -> ()
+  | EnclosedVar -> ()
+  | ImportedEntity v1 -> let v1 = map_dotted_ident env v1 in nothing env (v1)
+  | ImportedModule v1 -> let v1 = map_module_name env v1 in nothing env (v1)
+  | TypeName -> ()
+  | Macro -> ()
+  | EnumConstant -> ()
   
 let rec map_name env =
   function
   | Id ((v1, v2)) ->
       let v1 = map_ident env v1
       and v2 = map_id_info env v2
-      in todo env (v1, v2)
-  | IdQualified v1 -> let v1 = map_qualified_info env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | IdQualified v1 -> let v1 = map_qualified_info env v1 in nothing env (v1)
 and
   map_qualified_info env
                      {
@@ -113,7 +116,7 @@ and
         let v1 = map_ident env v1
         and v2 = map_of_option (map_type_arguments env) v2
         in (v1, v2)
-  in todo env ()
+  in nothing env ()
 and map_qualifier env =
   function
   | QDots v1 ->
@@ -124,9 +127,9 @@ and map_qualifier env =
              and v2 = map_of_option (map_type_arguments env) v2
              in (v1, v2))
           v1
-      in todo env (v1)
+      in nothing env (v1)
   | QExpr ((v1, v2)) ->
-      let v1 = map_expr env v1 and v2 = map_tok env v2 in todo env (v1, v2)
+      let v1 = map_expr env v1 and v2 = map_tok env v2 in nothing env (v1, v2)
 and
   map_id_info env
               {
@@ -141,7 +144,7 @@ and
   let v_id_type = map_of_ref (map_of_option (map_type_ env)) v_id_type in
   let v_id_resolved =
     map_of_ref (map_of_option (map_resolved_name env)) v_id_resolved
-  in todo env ()
+  in nothing env ()
 
 (*****************************************************************************)
 (* Expression *)
@@ -159,60 +162,60 @@ and map_expr env { e = v_e; e_id = v_e_id; e_range = v_e_range } =
          in (v1, v2))
       v_e_range in
   let v_e_id = map_of_int v_e_id in
-  let v_e = map_expr_kind env v_e in todo env ()
+  let v_e = map_expr_kind env v_e in nothing env ()
 and map_expr_kind env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
 
-  | L v1 -> let v1 = map_literal env v1 in todo env (v1)
+  | L v1 -> let v1 = map_literal env v1 in nothing env (v1)
   | Container ((v1, v2)) ->
       let v1 = map_container_operator env v1
       and v2 = map_bracket env (map_of_list (map_expr env)) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | Comprehension ((v1, v2)) ->
       let v1 = map_container_operator env v1
       and v2 = map_bracket env (map_comprehension env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | Record v1 ->
       let v1 = map_bracket env (map_of_list (map_field env)) v1
-      in todo env (v1)
+      in nothing env (v1)
   | Constructor ((v1, v2)) ->
       let v1 = map_name env v1
       and v2 = map_bracket env (map_of_list (map_expr env)) v2
-      in todo env (v1, v2)
-  | N v1 -> let v1 = map_name env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | N v1 -> let v1 = map_name env v1 in nothing env (v1)
   | IdSpecial v1 ->
-      let v1 = map_wrap env (map_special env) v1 in todo env (v1)
+      let v1 = map_wrap env (map_special env) v1 in nothing env (v1)
   | Call ((v1, v2)) ->
       let v1 = map_expr env v1
       and v2 = map_arguments env v2
-      in todo env (v1, v2)
-  | Xml v1 -> let v1 = map_xml env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | Xml v1 -> let v1 = map_xml env v1 in nothing env (v1)
   | Assign ((v1, v2, v3)) ->
       let v1 = map_expr env v1
       and v2 = map_tok env v2
       and v3 = map_expr env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | AssignOp ((v1, v2, v3)) ->
       let v1 = map_expr env v1
       and v2 = map_wrap env (map_operator env) v2
       and v3 = map_expr env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | LetPattern ((v1, v2)) ->
       let v1 = map_pattern env v1
       and v2 = map_expr env v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | DotAccess ((v1, v2, v3)) ->
       let v1 = map_expr env v1
       and v2 = map_tok env v2
       and v3 = map_field_name env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | ArrayAccess ((v1, v2)) ->
       let v1 = map_expr env v1
       and v2 = map_bracket env (map_expr env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | SliceAccess ((v1, v2)) ->
       let v1 = map_expr env v1
       and v2 =
@@ -223,85 +226,85 @@ and map_expr_kind env =
              and v3 = map_of_option (map_expr env) v3
              in (v1, v2, v3))
           v2
-      in todo env (v1, v2)
-  | Lambda v1 -> let v1 = map_function_definition env v1 in todo env (v1)
-  | AnonClass v1 -> let v1 = map_class_definition env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | Lambda v1 -> let v1 = map_function_definition env v1 in nothing env (v1)
+  | AnonClass v1 -> let v1 = map_class_definition env v1 in nothing env (v1)
   | Conditional ((v1, v2, v3)) ->
       let v1 = map_expr env v1
       and v2 = map_expr env v2
       and v3 = map_expr env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | Yield ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_of_option (map_expr env) v2
       and v3 = map_of_bool v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | Await ((v1, v2)) ->
-      let v1 = map_tok env v1 and v2 = map_expr env v2 in todo env (v1, v2)
+      let v1 = map_tok env v1 and v2 = map_expr env v2 in nothing env (v1, v2)
   | Cast ((v1, v2, v3)) ->
       let v1 = map_type_ env v1
       and v2 = map_tok env v2
       and v3 = map_expr env v3
-      in todo env (v1, v2, v3)
-  | Seq v1 -> let v1 = map_of_list (map_expr env) v1 in todo env (v1)
+      in nothing env (v1, v2, v3)
+  | Seq v1 -> let v1 = map_of_list (map_expr env) v1 in nothing env (v1)
   | Ref ((v1, v2)) ->
-      let v1 = map_tok env v1 and v2 = map_expr env v2 in todo env (v1, v2)
+      let v1 = map_tok env v1 and v2 = map_expr env v2 in nothing env (v1, v2)
   | DeRef ((v1, v2)) ->
-      let v1 = map_tok env v1 and v2 = map_expr env v2 in todo env (v1, v2)
+      let v1 = map_tok env v1 and v2 = map_expr env v2 in nothing env (v1, v2)
   | ParenExpr v1 ->
-      let v1 = map_bracket env (map_expr env) v1 in todo env (v1)
-  | Ellipsis v1 -> let v1 = map_tok env v1 in todo env (v1)
+      let v1 = map_bracket env (map_expr env) v1 in nothing env (v1)
+  | Ellipsis v1 -> let v1 = map_tok env v1 in nothing env (v1)
   | DeepEllipsis v1 ->
-      let v1 = map_bracket env (map_expr env) v1 in todo env (v1)
+      let v1 = map_bracket env (map_expr env) v1 in nothing env (v1)
   | DisjExpr ((v1, v2)) ->
-      let v1 = map_expr env v1 and v2 = map_expr env v2 in todo env (v1, v2)
+      let v1 = map_expr env v1 and v2 = map_expr env v2 in nothing env (v1, v2)
   | TypedMetavar ((v1, v2, v3)) ->
       let v1 = map_ident env v1
       and v2 = map_tok env v2
       and v3 = map_type_ env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | DotAccessEllipsis ((v1, v2)) ->
-      let v1 = map_expr env v1 and v2 = map_tok env v2 in todo env (v1, v2)
-  | StmtExpr v1 -> let v1 = map_stmt env v1 in todo env (v1)
+      let v1 = map_expr env v1 and v2 = map_tok env v2 in nothing env (v1, v2)
+  | StmtExpr v1 -> let v1 = map_stmt env v1 in nothing env (v1)
   | OtherExpr ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and map_literal env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | Bool v1 -> let v1 = map_wrap env map_of_bool v1 in todo env (v1)
+  | Bool v1 -> let v1 = map_wrap env map_of_bool v1 in nothing env (v1)
   | Int v1 ->
-      let v1 = map_wrap env (map_of_option map_of_int) v1 in todo env (v1)
+      let v1 = map_wrap env (map_of_option map_of_int) v1 in nothing env (v1)
   | Float v1 ->
-      let v1 = map_wrap env (map_of_option map_of_float) v1 in todo env (v1)
-  | Char v1 -> let v1 = map_wrap env map_of_string v1 in todo env (v1)
-  | String v1 -> let v1 = map_wrap env map_of_string v1 in todo env (v1)
+      let v1 = map_wrap env (map_of_option map_of_float) v1 in nothing env (v1)
+  | Char v1 -> let v1 = map_wrap env map_of_string v1 in nothing env (v1)
+  | String v1 -> let v1 = map_wrap env map_of_string v1 in nothing env (v1)
   | Regexp ((v1, v2)) ->
       let v1 = map_bracket env (map_wrap env map_of_string) v1
       and v2 = map_of_option (map_wrap env map_of_string) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | Atom ((v1, v2)) ->
       let v1 = map_tok env v1
       and v2 = map_wrap env map_of_string v2
-      in todo env (v1, v2)
-  | Unit v1 -> let v1 = map_tok env v1 in todo env (v1)
-  | Null v1 -> let v1 = map_tok env v1 in todo env (v1)
-  | Undefined v1 -> let v1 = map_tok env v1 in todo env (v1)
-  | Imag v1 -> let v1 = map_wrap env map_of_string v1 in todo env (v1)
-  | Ratio v1 -> let v1 = map_wrap env map_of_string v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | Unit v1 -> let v1 = map_tok env v1 in nothing env (v1)
+  | Null v1 -> let v1 = map_tok env v1 in nothing env (v1)
+  | Undefined v1 -> let v1 = map_tok env v1 in nothing env (v1)
+  | Imag v1 -> let v1 = map_wrap env map_of_string v1 in nothing env (v1)
+  | Ratio v1 -> let v1 = map_wrap env map_of_string v1 in nothing env (v1)
 and map_const_type env _ = ()
 and map_svalue env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | Lit v1 -> let v1 = map_literal env v1 in todo env (v1)
-  | Cst v1 -> let v1 = map_const_type env v1 in todo env (v1)
-  | Sym v1 -> let v1 = map_expr env v1 in todo env (v1)
-  | NotCst -> NotCst
+  | Lit v1 -> let v1 = map_literal env v1 in nothing env (v1)
+  | Cst v1 -> let v1 = map_const_type env v1 in nothing env (v1)
+  | Sym v1 -> let v1 = map_expr env v1 in nothing env (v1)
+  | NotCst -> ()
 and map_container_operator _env _ = ()
 and map_comprehension env (v1, v2) =
   let v1 = map_expr env v1
@@ -317,40 +320,40 @@ and map_for_or_if_comp env =
       and v2 = map_pattern env v2
       and v3 = map_tok env v3
       and v4 = map_expr env v4
-      in todo env (v1, v2, v3, v4)
+      in nothing env (v1, v2, v3, v4)
   | CompIf ((v1, v2)) ->
-      let v1 = map_tok env v1 and v2 = map_expr env v2 in todo env (v1, v2)
+      let v1 = map_tok env v1 and v2 = map_expr env v2 in nothing env (v1, v2)
 and map_field_name env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | FN v1 -> let v1 = map_name env v1 in todo env (v1)
-  | FDynamic v1 -> let v1 = map_expr env v1 in todo env (v1)
+  | FN v1 -> let v1 = map_name env v1 in nothing env (v1)
+  | FDynamic v1 -> let v1 = map_expr env v1 in nothing env (v1)
 and map_special env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | This -> This
-  | Super -> Super
-  | Self -> Self
-  | Parent -> Parent
-  | NextArrayIndex -> NextArrayIndex
-  | Eval -> Eval
-  | Typeof -> Typeof
-  | Instanceof -> Instanceof
-  | Sizeof -> Sizeof
-  | Defined -> Defined
-  | New -> New
+  | This -> ()
+  | Super -> ()
+  | Self -> ()
+  | Parent -> ()
+  | NextArrayIndex -> ()
+  | Eval -> ()
+  | Typeof -> ()
+  | Instanceof -> ()
+  | Sizeof -> ()
+  | Defined -> ()
+  | New -> ()
   | ConcatString v1 ->
-      let v1 = map_concat_string_kind env v1 in todo env (v1)
-  | EncodedString v1 -> let v1 = map_of_string v1 in todo env (v1)
-  | InterpolatedElement -> InterpolatedElement
-  | Spread -> Spread
-  | HashSplat -> HashSplat
-  | ForOf -> ForOf
-  | Op v1 -> let v1 = map_operator env v1 in todo env (v1)
+      let v1 = map_concat_string_kind env v1 in nothing env (v1)
+  | EncodedString v1 -> let v1 = map_of_string v1 in nothing env (v1)
+  | InterpolatedElement -> ()
+  | Spread -> ()
+  | HashSplat -> ()
+  | ForOf -> ()
+  | Op v1 -> let v1 = map_operator env v1 in nothing env (v1)
   | IncrDecr v1 ->
       let v1 =
         (match v1 with
@@ -358,7 +361,7 @@ and map_special env =
              let v1 = map_incr_decr env v1
              and v2 = map_prefix_postfix env v2
              in (v1, v2))
-      in todo env (v1)
+      in nothing env (v1)
 and map_operator env _ = ()
 and map_incr_decr env _ = ()
 and map_prefix_postfix env _ = ()
@@ -375,7 +378,7 @@ and
   (* ----------- *)
   let v_xml_body = map_of_list (map_xml_body env) v_xml_body in
   let v_xml_attrs = map_of_list (map_xml_attribute env) v_xml_attrs in
-  let v_xml_kind = map_xml_kind env v_xml_kind in todo env ()
+  let v_xml_kind = map_xml_kind env v_xml_kind in nothing env ()
 and map_xml_kind env =
   function
   (* ----------- *)
@@ -386,14 +389,14 @@ and map_xml_kind env =
       and v2 = map_ident env v2
       and v3 = map_tok env v3
       and v4 = map_tok env v4
-      in todo env (v1, v2, v3, v4)
+      in nothing env (v1, v2, v3, v4)
   | XmlSingleton ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_ident env v2
       and v3 = map_tok env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | XmlFragment ((v1, v2)) ->
-      let v1 = map_tok env v1 and v2 = map_tok env v2 in todo env (v1, v2)
+      let v1 = map_tok env v1 and v2 = map_tok env v2 in nothing env (v1, v2)
 and map_xml_attribute env =
   function
   (* ----------- *)
@@ -403,37 +406,37 @@ and map_xml_attribute env =
       let v1 = map_ident env v1
       and v2 = map_tok env v2
       and v3 = map_a_xml_attr_value env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | XmlAttrExpr v1 ->
-      let v1 = map_bracket env (map_expr env) v1 in todo env (v1)
-  | XmlEllipsis v1 -> let v1 = map_tok env v1 in todo env (v1)
+      let v1 = map_bracket env (map_expr env) v1 in nothing env (v1)
+  | XmlEllipsis v1 -> let v1 = map_tok env v1 in nothing env (v1)
 and map_a_xml_attr_value env v = map_expr env v
 and map_xml_body env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | XmlText v1 -> let v1 = map_wrap env map_of_string v1 in todo env (v1)
+  | XmlText v1 -> let v1 = map_wrap env map_of_string v1 in nothing env (v1)
   | XmlExpr v1 ->
       let v1 = map_bracket env (map_of_option (map_expr env)) v1
-      in todo env (v1)
-  | XmlXml v1 -> let v1 = map_xml env v1 in todo env (v1)
+      in nothing env (v1)
+  | XmlXml v1 -> let v1 = map_xml env v1 in nothing env (v1)
 and map_arguments env v = map_bracket env (map_of_list (map_argument env)) v
 and map_argument env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | Arg v1 -> let v1 = map_expr env v1 in todo env (v1)
+  | Arg v1 -> let v1 = map_expr env v1 in nothing env (v1)
   | ArgKwd ((v1, v2)) ->
-      let v1 = map_ident env v1 and v2 = map_expr env v2 in todo env (v1, v2)
+      let v1 = map_ident env v1 and v2 = map_expr env v2 in nothing env (v1, v2)
   | ArgKwdOptional ((v1, v2)) ->
-      let v1 = map_ident env v1 and v2 = map_expr env v2 in todo env (v1, v2)
-  | ArgType v1 -> let v1 = map_type_ env v1 in todo env (v1)
+      let v1 = map_ident env v1 and v2 = map_expr env v2 in nothing env (v1, v2)
+  | ArgType v1 -> let v1 = map_type_ env v1 in nothing env (v1)
   | OtherArg ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 
 (*****************************************************************************)
 (* Statement *)
@@ -466,119 +469,119 @@ and
     (* map_of_option (AST_utils.String_set.map_t env) *) v_s_backrefs in
   let v_s_use_cache = map_of_bool v_s_use_cache in
   let v_s_id = (*AST_utils.Node_ID.map_t env *) v_s_id in
-  let v_s = map_stmt_kind env v_s in todo env ()
+  let v_s = map_stmt_kind env v_s in nothing env ()
 and map_stmt_kind env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
   | ExprStmt ((v1, v2)) ->
-      let v1 = map_expr env v1 and v2 = map_sc env v2 in todo env (v1, v2)
+      let v1 = map_expr env v1 and v2 = map_sc env v2 in nothing env (v1, v2)
   | Block v1 ->
       let v1 = map_bracket env (map_of_list (map_stmt env)) v1
-      in todo env (v1)
+      in nothing env (v1)
   | If ((v1, v2, v3, v4)) ->
       let v1 = map_tok env v1
       and v2 = map_condition env v2
       and v3 = map_stmt env v3
       and v4 = map_of_option (map_stmt env) v4
-      in todo env (v1, v2, v3, v4)
+      in nothing env (v1, v2, v3, v4)
   | While ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_condition env v2
       and v3 = map_stmt env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | Return ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_of_option (map_expr env) v2
       and v3 = map_sc env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | DoWhile ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_stmt env v2
       and v3 = map_expr env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | For ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_for_header env v2
       and v3 = map_stmt env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | Switch ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_of_option (map_condition env) v2
       and v3 = map_of_list (map_case_and_body env) v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | Match ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_expr env v2
       and v3 = map_of_list (map_action env) v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | Continue ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_label_ident env v2
       and v3 = map_sc env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | Break ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_label_ident env v2
       and v3 = map_sc env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   (* could have an entity and dependency ... but it's intra procedural
    * so not that useful
    *)
   | Label ((v1, v2)) ->
-      let v1 = map_label env v1 and v2 = map_stmt env v2 in todo env (v1, v2)
+      let v1 = map_label env v1 and v2 = map_stmt env v2 in nothing env (v1, v2)
   | Goto ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_label env v2
       and v3 = map_sc env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | Throw ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_expr env v2
       and v3 = map_sc env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | Try ((v1, v2, v3, v4)) ->
       let v1 = map_tok env v1
       and v2 = map_stmt env v2
       and v3 = map_of_list (map_catch env) v3
       and v4 = map_of_option (map_finally env) v4
-      in todo env (v1, v2, v3, v4)
+      in nothing env (v1, v2, v3, v4)
   | WithUsingResource ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_stmt env v2
       and v3 = map_stmt env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | Assert ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_arguments env v2
       and v3 = map_sc env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
 
   (* TODO The modification of env.params_locals is done in decls() *)
-  | DefStmt v1 -> let v1 = map_definition env v1 in todo env (v1)
-  | DirectiveStmt v1 -> let v1 = map_directive env v1 in todo env (v1)
+  | DefStmt v1 -> let v1 = map_definition env v1 in nothing env (v1)
+  | DirectiveStmt v1 -> let v1 = map_directive env v1 in nothing env (v1)
   | DisjStmt ((v1, v2)) ->
-      let v1 = map_stmt env v1 and v2 = map_stmt env v2 in todo env (v1, v2)
+      let v1 = map_stmt env v1 and v2 = map_stmt env v2 in nothing env (v1, v2)
   | OtherStmtWithStmt ((v1, v2, v3)) ->
       let v1 = map_other_stmt_with_stmt_operator env v1
       and v2 = map_of_list (map_any env) v2
       and v3 = map_stmt env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | OtherStmt ((v1, v2)) ->
       let v1 = map_other_stmt_operator env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and map_condition env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | Cond v1 -> let v1 = map_expr env v1 in todo env (v1)
+  | Cond v1 -> let v1 = map_expr env v1 in nothing env (v1)
   | OtherCond ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and map_case_and_body env =
   function
   (* ----------- *)
@@ -591,8 +594,8 @@ and map_case_and_body env =
              let v1 = map_of_list (map_case env) v1
              and v2 = map_stmt env v2
              in (v1, v2))
-      in todo env (v1)
-  | CaseEllipsis v1 -> let v1 = map_tok env v1 in todo env (v1)
+      in nothing env (v1)
+  | CaseEllipsis v1 -> let v1 = map_tok env v1 in nothing env (v1)
 and map_case env =
   function
   (* ----------- *)
@@ -601,14 +604,14 @@ and map_case env =
   | Case ((v1, v2)) ->
       let v1 = map_tok env v1
       and v2 = map_pattern env v2
-      in todo env (v1, v2)
-  | Default v1 -> let v1 = map_tok env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | Default v1 -> let v1 = map_tok env v1 in nothing env (v1)
   | CaseEqualExpr ((v1, v2)) ->
-      let v1 = map_tok env v1 and v2 = map_expr env v2 in todo env (v1, v2)
+      let v1 = map_tok env v1 and v2 = map_expr env v2 in nothing env (v1, v2)
   | OtherCase ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and map_action env (v1, v2) =
   let v1 = map_pattern env v1 and v2 = map_expr env v2 in (v1, v2)
 and map_catch env (v1, v2, v3) =
@@ -621,12 +624,12 @@ and map_catch_exn env =
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | CatchPattern v1 -> let v1 = map_pattern env v1 in todo env (v1)
-  | CatchParam v1 -> let v1 = map_parameter_classic env v1 in todo env (v1)
+  | CatchPattern v1 -> let v1 = map_pattern env v1 in nothing env (v1)
+  | CatchParam v1 -> let v1 = map_parameter_classic env v1 in nothing env (v1)
   | OtherCatch ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and map_finally env (v1, v2) =
   let v1 = map_tok env v1 and v2 = map_stmt env v2 in (v1, v2)
 and map_label env v = map_ident env v
@@ -635,10 +638,10 @@ and map_label_ident env =
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | LNone -> LNone
-  | LId v1 -> let v1 = map_label env v1 in todo env (v1)
-  | LInt v1 -> let v1 = map_wrap env map_of_int v1 in todo env (v1)
-  | LDynamic v1 -> let v1 = map_expr env v1 in todo env (v1)
+  | LNone -> ()
+  | LId v1 -> let v1 = map_label env v1 in nothing env (v1)
+  | LInt v1 -> let v1 = map_wrap env map_of_int v1 in nothing env (v1)
+  | LDynamic v1 -> let v1 = map_expr env v1 in nothing env (v1)
 and map_for_header env =
   function
   (* ----------- *)
@@ -648,17 +651,17 @@ and map_for_header env =
       let v1 = map_of_list (map_for_var_or_expr env) v1
       and v2 = map_of_option (map_expr env) v2
       and v3 = map_of_option (map_expr env) v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | ForEach ((v1, v2, v3)) ->
       let v1 = map_pattern env v1
       and v2 = map_tok env v2
       and v3 = map_expr env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | ForIn ((v1, v2)) ->
       let v1 = map_of_list (map_for_var_or_expr env) v1
       and v2 = map_of_list (map_expr env) v2
-      in todo env (v1, v2)
-  | ForEllipsis v1 -> let v1 = map_tok env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | ForEllipsis v1 -> let v1 = map_tok env v1 in nothing env (v1)
 and map_for_var_or_expr env =
   function
   (* ----------- *)
@@ -667,8 +670,8 @@ and map_for_var_or_expr env =
   | ForInitVar ((v1, v2)) ->
       let v1 = map_entity env v1
       and v2 = map_variable_definition env v2
-      in todo env (v1, v2)
-  | ForInitExpr v1 -> let v1 = map_expr env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | ForInitExpr v1 -> let v1 = map_expr env v1 in nothing env (v1)
 and map_other_stmt_with_stmt_operator env _ = ()
 and map_other_stmt_operator env _ = ()
 
@@ -681,11 +684,11 @@ and map_pattern env =
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | PatLiteral v1 -> let v1 = map_literal env v1 in todo env (v1)
+  | PatLiteral v1 -> let v1 = map_literal env v1 in nothing env (v1)
   | PatConstructor ((v1, v2)) ->
       let v1 = map_name env v1
       and v2 = map_of_list (map_pattern env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | PatRecord v1 ->
       let v1 =
         map_bracket env
@@ -695,34 +698,34 @@ and map_pattern env =
                 and v2 = map_pattern env v2
                 in (v1, v2)))
           v1
-      in todo env (v1)
+      in nothing env (v1)
   | PatId ((v1, v2)) ->
       let v1 = map_ident env v1
       and v2 = map_id_info env v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | PatTuple v1 ->
       let v1 = map_bracket env (map_of_list (map_pattern env)) v1
-      in todo env (v1)
+      in nothing env (v1)
   | PatList v1 ->
       let v1 = map_bracket env (map_of_list (map_pattern env)) v1
-      in todo env (v1)
+      in nothing env (v1)
   | PatKeyVal ((v1, v2)) ->
       let v1 = map_pattern env v1
       and v2 = map_pattern env v2
-      in todo env (v1, v2)
-  | PatUnderscore v1 -> let v1 = map_tok env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | PatUnderscore v1 -> let v1 = map_tok env v1 in nothing env (v1)
   | PatDisj ((v1, v2)) ->
       let v1 = map_pattern env v1
       and v2 = map_pattern env v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | PatTyped ((v1, v2)) ->
       let v1 = map_pattern env v1
       and v2 = map_type_ env v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | PatWhen ((v1, v2)) ->
       let v1 = map_pattern env v1
       and v2 = map_expr env v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | PatAs ((v1, v2)) ->
       let v1 = map_pattern env v1
       and v2 =
@@ -731,17 +734,17 @@ and map_pattern env =
              let v1 = map_ident env v1
              and v2 = map_id_info env v2
              in (v1, v2))
-      in todo env (v1, v2)
-  | PatType v1 -> let v1 = map_type_ env v1 in todo env (v1)
-  | PatEllipsis v1 -> let v1 = map_tok env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | PatType v1 -> let v1 = map_type_ env v1 in nothing env (v1)
+  | PatEllipsis v1 -> let v1 = map_tok env v1 in nothing env (v1)
   | DisjPat ((v1, v2)) ->
       let v1 = map_pattern env v1
       and v2 = map_pattern env v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | OtherPat ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 
 (*****************************************************************************)
 (* Type *)
@@ -749,58 +752,58 @@ and map_pattern env =
 
 and map_type_ env { t = v_t; t_attrs = v_t_attrs } =
   let v_t_attrs = map_of_list (map_attribute env) v_t_attrs in
-  let v_t = map_type_kind env v_t in todo env ()
+  let v_t = map_type_kind env v_t in nothing env ()
 and map_type_kind env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | TyN v1 -> let v1 = map_name env v1 in todo env (v1)
+  | TyN v1 -> let v1 = map_name env v1 in nothing env (v1)
   | TyApply ((v1, v2)) ->
       let v1 = map_type_ env v1
       and v2 = map_type_arguments env v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | TyFun ((v1, v2)) ->
       let v1 = map_of_list (map_parameter env) v1
       and v2 = map_type_ env v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | TyArray ((v1, v2)) ->
       let v1 = map_bracket env (map_of_option (map_expr env)) v1
       and v2 = map_type_ env v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | TyTuple v1 ->
       let v1 = map_bracket env (map_of_list (map_type_ env)) v1
-      in todo env (v1)
-  | TyVar v1 -> let v1 = map_ident env v1 in todo env (v1)
-  | TyAny v1 -> let v1 = map_tok env v1 in todo env (v1)
+      in nothing env (v1)
+  | TyVar v1 -> let v1 = map_ident env v1 in nothing env (v1)
+  | TyAny v1 -> let v1 = map_tok env v1 in nothing env (v1)
   | TyPointer ((v1, v2)) ->
-      let v1 = map_tok env v1 and v2 = map_type_ env v2 in todo env (v1, v2)
+      let v1 = map_tok env v1 and v2 = map_type_ env v2 in nothing env (v1, v2)
   | TyRef ((v1, v2)) ->
-      let v1 = map_tok env v1 and v2 = map_type_ env v2 in todo env (v1, v2)
+      let v1 = map_tok env v1 and v2 = map_type_ env v2 in nothing env (v1, v2)
   | TyQuestion ((v1, v2)) ->
-      let v1 = map_type_ env v1 and v2 = map_tok env v2 in todo env (v1, v2)
+      let v1 = map_type_ env v1 and v2 = map_tok env v2 in nothing env (v1, v2)
   | TyRest ((v1, v2)) ->
-      let v1 = map_tok env v1 and v2 = map_type_ env v2 in todo env (v1, v2)
+      let v1 = map_tok env v1 and v2 = map_type_ env v2 in nothing env (v1, v2)
   | TyAnd ((v1, v2, v3)) ->
       let v1 = map_type_ env v1
       and v2 = map_tok env v2
       and v3 = map_type_ env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | TyOr ((v1, v2, v3)) ->
       let v1 = map_type_ env v1
       and v2 = map_tok env v2
       and v3 = map_type_ env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | TyRecordAnon ((v1, v2)) ->
       let v1 = map_wrap env (map_class_kind env) v1
       and v2 = map_bracket env (map_of_list (map_field env)) v2
-      in todo env (v1, v2)
-  | TyEllipsis v1 -> let v1 = map_tok env v1 in todo env (v1)
-  | TyExpr v1 -> let v1 = map_expr env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | TyEllipsis v1 -> let v1 = map_tok env v1 in nothing env (v1)
+  | TyExpr v1 -> let v1 = map_expr env v1 in nothing env (v1)
   | OtherType ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and map_type_arguments env v =
   map_bracket env (map_of_list (map_type_argument env)) v
 and map_type_argument env =
@@ -808,7 +811,7 @@ and map_type_argument env =
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | TA v1 -> let v1 = map_type_ env v1 in todo env (v1)
+  | TA v1 -> let v1 = map_type_ env v1 in nothing env (v1)
   | TAWildcard ((v1, v2)) ->
       let v1 = map_tok env v1
       and v2 =
@@ -818,12 +821,12 @@ and map_type_argument env =
              and v2 = map_type_ env v2
              in (v1, v2))
           v2
-      in todo env (v1, v2)
-  | TAExpr v1 -> let v1 = map_expr env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | TAExpr v1 -> let v1 = map_expr env v1 in nothing env (v1)
   | OtherTypeArg ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 
 (*****************************************************************************)
 (* Attribute *)
@@ -835,16 +838,16 @@ and map_attribute env =
   (* Boilerplate *)
   (* ----------- *)
   | KeywordAttr v1 ->
-      let v1 = map_wrap env (map_keyword_attribute env) v1 in todo env (v1)
+      let v1 = map_wrap env (map_keyword_attribute env) v1 in nothing env (v1)
   | NamedAttr ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_name env v2
       and v3 = map_arguments env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | OtherAttribute ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and map_keyword_attribute env _ = ()
 
 (*****************************************************************************)
@@ -852,55 +855,84 @@ and map_keyword_attribute env _ = ()
 (*****************************************************************************)
 
 and map_definition env (v1, v2) =
+  let env = 
+    match H.ident_of_entity_opt env v1 with
+    | Some id ->
+       let dotted_ident = env.current_qualifier @ [id] in
+       let str = H.str_of_dotted_ident dotted_ident in
+       let kind = H.entity_kind_of_definition_kind env v2 in
+       let node = str, kind in
+       if env.phase = Defs then begin
+          (* less: static? *)
+          (* less: we just collapse all methods with same name together *)
+          if G.has_node node env.g
+          then ()
+          else begin
+           env.g |> G.add_node node;
+           (*env.g |> G.add_nodeinfo node (nodeinfo def.m_var.name);*)
+           env.g |> G.add_edge (env.current_parent, node) G.Has;
+          end
+       end;
+      { env with
+         current_parent = node;
+         current_qualifier = dotted_ident;
+       }
+    | None ->
+        (* TODO? handle also the qualified ident case? *)
+        env
+  in     
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
   let v1 = map_entity env v1 and v2 = map_definition_kind env v2 in (v1, v2)
 and map_entity env { name = v_name; attrs = v_attrs; tparams = v_tparams } =
   let v_tparams = map_type_parameters env v_tparams in
   let v_attrs = map_of_list (map_attribute env) v_attrs in
-  let v_name = map_entity_name env v_name in todo env ()
+  let v_name = map_entity_name env v_name in nothing env ()
 and map_entity_name env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | EN v1 -> let v1 = map_name env v1 in todo env (v1)
-  | EDynamic v1 -> let v1 = map_expr env v1 in todo env (v1)
-  | EPattern v1 -> let v1 = map_pattern env v1 in todo env (v1)
+  | EN v1 -> let v1 = map_name env v1 in nothing env (v1)
+  | EDynamic v1 -> let v1 = map_expr env v1 in nothing env (v1)
+  | EPattern v1 -> let v1 = map_pattern env v1 in nothing env (v1)
   | OtherEntity ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and map_definition_kind env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | FuncDef v1 -> let v1 = map_function_definition env v1 in todo env (v1)
-  | VarDef v1 -> let v1 = map_variable_definition env v1 in todo env (v1)
+  | FuncDef v1 -> let v1 = map_function_definition env v1 in nothing env (v1)
+  | VarDef v1 -> let v1 = map_variable_definition env v1 in nothing env (v1)
   | FieldDefColon v1 ->
-      let v1 = map_variable_definition env v1 in todo env (v1)
-  | ClassDef v1 -> let v1 = map_class_definition env v1 in todo env (v1)
+      let v1 = map_variable_definition env v1 in nothing env (v1)
+  | ClassDef v1 -> let v1 = map_class_definition env v1 in nothing env (v1)
   | EnumEntryDef v1 ->
-      let v1 = map_enum_entry_definition env v1 in todo env (v1)
-  | TypeDef v1 -> let v1 = map_type_definition env v1 in todo env (v1)
-  | ModuleDef v1 -> let v1 = map_module_definition env v1 in todo env (v1)
-  | MacroDef v1 -> let v1 = map_macro_definition env v1 in todo env (v1)
-  | Signature v1 -> let v1 = map_type_ env v1 in todo env (v1)
-  | UseOuterDecl v1 -> let v1 = map_tok env v1 in todo env (v1)
+      let v1 = map_enum_entry_definition env v1 in nothing env (v1)
+  | TypeDef v1 -> let v1 = map_type_definition env v1 in nothing env (v1)
+  | ModuleDef v1 -> let v1 = map_module_definition env v1 in nothing env (v1)
+  | MacroDef v1 -> let v1 = map_macro_definition env v1 in nothing env (v1)
+  | Signature v1 -> let v1 = map_type_ env v1 in nothing env (v1)
+  | UseOuterDecl v1 -> let v1 = map_tok env v1 in nothing env (v1)
   | OtherDef ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and map_type_parameter env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | TP v1 -> let v1 = map_type_parameter_classic env v1 in todo env (v1)
-  | TParamEllipsis v1 -> let v1 = map_tok env v1 in todo env (v1)
+  | TP v1 -> let v1 = map_type_parameter_classic env v1 in nothing env (v1)
+  | TParamEllipsis v1 -> let v1 = map_tok env v1 in nothing env (v1)
   | OtherTypeParam ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and
   map_type_parameter_classic env
                              {
@@ -918,7 +950,7 @@ and
   let v_tp_default = map_of_option (map_type_ env) v_tp_default in
   let v_tp_bounds = map_of_list (map_type_ env) v_tp_bounds in
   let v_tp_attrs = map_of_list (map_attribute env) v_tp_attrs in
-  let v_tp_id = map_ident env v_tp_id in todo env ()
+  let v_tp_id = map_ident env v_tp_id in nothing env ()
 and map_type_parameters env v = map_of_list (map_type_parameter env) v
 and map_variance env _ = ()
 
@@ -940,7 +972,7 @@ and
   let v_fbody = map_function_body env v_fbody in
   let v_frettype = map_of_option (map_type_ env) v_frettype in
   let v_fparams = map_parameters env v_fparams in
-  let v_fkind = map_wrap env (map_function_kind env) v_fkind in todo env ()
+  let v_fkind = map_wrap env (map_function_kind env) v_fkind in nothing env ()
 and map_function_kind env _ = ()
 and map_parameters env v = map_of_list (map_parameter env) v
 and map_parameter env =
@@ -948,21 +980,21 @@ and map_parameter env =
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | Param v1 -> let v1 = map_parameter_classic env v1 in todo env (v1)
-  | ParamPattern v1 -> let v1 = map_pattern env v1 in todo env (v1)
+  | Param v1 -> let v1 = map_parameter_classic env v1 in nothing env (v1)
+  | ParamPattern v1 -> let v1 = map_pattern env v1 in nothing env (v1)
   | ParamRest ((v1, v2)) ->
       let v1 = map_tok env v1
       and v2 = map_parameter_classic env v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | ParamHashSplat ((v1, v2)) ->
       let v1 = map_tok env v1
       and v2 = map_parameter_classic env v2
-      in todo env (v1, v2)
-  | ParamEllipsis v1 -> let v1 = map_tok env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | ParamEllipsis v1 -> let v1 = map_tok env v1 in nothing env (v1)
   | OtherParam ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and
   map_parameter_classic env
                         {
@@ -979,16 +1011,16 @@ and
   let v_pattrs = map_of_list (map_attribute env) v_pattrs in
   let v_pdefault = map_of_option (map_expr env) v_pdefault in
   let v_ptype = map_of_option (map_type_ env) v_ptype in
-  let v_pname = map_of_option (map_ident env) v_pname in todo env ()
+  let v_pname = map_of_option (map_ident env) v_pname in nothing env ()
 and map_function_body env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | FBStmt v1 -> let v1 = map_stmt env v1 in todo env (v1)
-  | FBExpr v1 -> let v1 = map_expr env v1 in todo env (v1)
-  | FBDecl v1 -> let v1 = map_sc env v1 in todo env (v1)
-  | FBNothing -> FBNothing
+  | FBStmt v1 -> let v1 = map_stmt env v1 in nothing env (v1)
+  | FBExpr v1 -> let v1 = map_expr env v1 in nothing env (v1)
+  | FBDecl v1 -> let v1 = map_sc env v1 in nothing env (v1)
+  | FBNothing -> ()
 
 (* ------------------------------------------------------------------------- *)
 (* Variable definition *)
@@ -999,7 +1031,7 @@ and map_variable_definition env { vinit = v_vinit; vtype = v_vtype } =
   (* Boilerplate *)
   (* ----------- *)
   let v_vtype = map_of_option (map_type_ env) v_vtype in
-  let v_vinit = map_of_option (map_expr env) v_vinit in todo env ()
+  let v_vinit = map_of_option (map_expr env) v_vinit in nothing env ()
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1007,28 +1039,28 @@ and map_variable_definition env { vinit = v_vinit; vtype = v_vtype } =
 (* ------------------------------------------------------------------------- *)
 
 and map_type_definition env { tbody = v_tbody } =
-  let v_tbody = map_type_definition_kind env v_tbody in todo env ()
+  let v_tbody = map_type_definition_kind env v_tbody in nothing env ()
 and map_type_definition_kind env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
   | OrType v1 ->
-      let v1 = map_of_list (map_or_type_element env) v1 in todo env (v1)
+      let v1 = map_of_list (map_or_type_element env) v1 in nothing env (v1)
   | AndType v1 ->
       let v1 = map_bracket env (map_of_list (map_field env)) v1
-      in todo env (v1)
-  | AliasType v1 -> let v1 = map_type_ env v1 in todo env (v1)
-  | NewType v1 -> let v1 = map_type_ env v1 in todo env (v1)
-  | AbstractType v1 -> let v1 = map_tok env v1 in todo env (v1)
+      in nothing env (v1)
+  | AliasType v1 -> let v1 = map_type_ env v1 in nothing env (v1)
+  | NewType v1 -> let v1 = map_type_ env v1 in nothing env (v1)
+  | AbstractType v1 -> let v1 = map_tok env v1 in nothing env (v1)
   | Exception ((v1, v2)) ->
       let v1 = map_ident env v1
       and v2 = map_of_list (map_type_ env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | OtherTypeKind ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and map_or_type_element env =
   function
   (* ----------- *)
@@ -1037,15 +1069,15 @@ and map_or_type_element env =
   | OrConstructor ((v1, v2)) ->
       let v1 = map_ident env v1
       and v2 = map_of_list (map_type_ env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | OrEnum ((v1, v2)) ->
       let v1 = map_ident env v1
       and v2 = map_of_option (map_expr env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | OrUnion ((v1, v2)) ->
       let v1 = map_ident env v1
       and v2 = map_type_ env v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 
 (* ------------------------------------------------------------------------- *)
 (* Object/struct/record/class field definition *)
@@ -1055,7 +1087,7 @@ and map_field env =
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  function | F v1 -> let v1 = map_stmt env v1 in todo env (v1)
+  function | F v1 -> let v1 = map_stmt env v1 in nothing env (v1)
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1080,7 +1112,7 @@ and
   let v_cmixins = map_of_list (map_type_ env) v_cmixins in
   let v_cimplements = map_of_list (map_type_ env) v_cimplements in
   let v_cextends = map_of_list (map_class_parent env) v_cextends in
-  let v_ckind = map_wrap env (map_class_kind env) v_ckind in todo env ()
+  let v_ckind = map_wrap env (map_class_kind env) v_ckind in nothing env ()
 and map_class_kind env _ = ()
 and map_class_parent env (v1, v2) =
   (* ----------- *)
@@ -1102,28 +1134,28 @@ and
   (* ----------- *)
   let v_ee_body =
     map_of_option (map_bracket env (map_of_list (map_field env))) v_ee_body in
-  let v_ee_args = map_of_option (map_arguments env) v_ee_args in todo env ()
+  let v_ee_args = map_of_option (map_arguments env) v_ee_args in nothing env ()
 
 (* ------------------------------------------------------------------------- *)
 (* Module definition  *)
 (* ------------------------------------------------------------------------- *)
 
 and map_module_definition env { mbody = v_mbody } =
-  let v_mbody = map_module_definition_kind env v_mbody in todo env ()
+  let v_mbody = map_module_definition_kind env v_mbody in nothing env ()
 and map_module_definition_kind env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | ModuleAlias v1 -> let v1 = map_dotted_ident env v1 in todo env (v1)
+  | ModuleAlias v1 -> let v1 = map_dotted_ident env v1 in nothing env (v1)
   | ModuleStruct ((v1, v2)) ->
       let v1 = map_of_option (map_dotted_ident env) v1
       and v2 = map_of_list (map_item env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | OtherModule ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 
 (* ------------------------------------------------------------------------- *)
 (* Macro definition *)
@@ -1138,7 +1170,7 @@ and
   (* ----------- *)
   let v_macrobody = map_of_list (map_any env) v_macrobody in
   let v_macroparams = map_of_list (map_ident env) v_macroparams
-  in todo env ()
+  in nothing env ()
 
 (*****************************************************************************)
 (* Directives (Module import/export, package) *)
@@ -1149,7 +1181,7 @@ and map_directive env { d = v_d; d_attrs = v_d_attrs } =
   (* Boilerplate *)
   (* ----------- *)
   let v_d_attrs = map_of_list (map_attribute env) v_d_attrs in
-  let v_d = map_directive_kind env v_d in todo env ()
+  let v_d = map_directive_kind env v_d in nothing env ()
 and map_directive_kind env =
   function
   (* ----------- *)
@@ -1160,30 +1192,30 @@ and map_directive_kind env =
       and v2 = map_module_name env v2
       and v3 = map_ident env v3
       and v4 = map_of_option (map_alias env) v4
-      in todo env (v1, v2, v3, v4)
+      in nothing env (v1, v2, v3, v4)
   | ImportAs ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_module_name env v2
       and v3 = map_of_option (map_alias env) v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | ImportAll ((v1, v2, v3)) ->
       let v1 = map_tok env v1
       and v2 = map_module_name env v2
       and v3 = map_tok env v3
-      in todo env (v1, v2, v3)
+      in nothing env (v1, v2, v3)
   | Package ((v1, v2)) ->
       let v1 = map_tok env v1
       and v2 = map_dotted_ident env v2
-      in todo env (v1, v2)
-  | PackageEnd v1 -> let v1 = map_tok env v1 in todo env (v1)
+      in nothing env (v1, v2)
+  | PackageEnd v1 -> let v1 = map_tok env v1 in nothing env (v1)
   | Pragma ((v1, v2)) ->
       let v1 = map_ident env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
   | OtherDirective ((v1, v2)) ->
       let v1 = map_todo_kind env v1
       and v2 = map_of_list (map_any env) v2
-      in todo env (v1, v2)
+      in nothing env (v1, v2)
 and map_alias env (v1, v2) =
   let v1 = map_ident env v1 and v2 = map_id_info env v2 in (v1, v2)
 
@@ -1206,36 +1238,36 @@ and map_any env =
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | E v1 -> let v1 = map_expr env v1 in todo env (v1)
-  | S v1 -> let v1 = map_stmt env v1 in todo env (v1)
-  | Ss v1 -> let v1 = map_of_list (map_stmt env) v1 in todo env (v1)
-  | T v1 -> let v1 = map_type_ env v1 in todo env (v1)
-  | P v1 -> let v1 = map_pattern env v1 in todo env (v1)
-  | At v1 -> let v1 = map_attribute env v1 in todo env (v1)
-  | Fld v1 -> let v1 = map_field env v1 in todo env (v1)
-  | Flds v1 -> let v1 = map_of_list (map_field env) v1 in todo env (v1)
-  | Args v1 -> let v1 = map_of_list (map_argument env) v1 in todo env (v1)
-  | Params v1 -> let v1 = map_of_list (map_parameter env) v1 in todo env (v1)
-  | Partial v1 -> let v1 = map_partial env v1 in todo env (v1)
-  | I v1 -> let v1 = map_ident env v1 in todo env (v1)
-  | Str v1 -> let v1 = map_wrap env map_of_string v1 in todo env (v1)
-  | Def v1 -> let v1 = map_definition env v1 in todo env (v1)
-  | Dir v1 -> let v1 = map_directive env v1 in todo env (v1)
-  | Pr v1 -> let v1 = map_program env v1 in todo env (v1)
-  | Tk v1 -> let v1 = map_tok env v1 in todo env (v1)
-  | TodoK v1 -> let v1 = map_todo_kind env v1 in todo env (v1)
-  | Ar v1 -> let v1 = map_argument env v1 in todo env (v1)
-  | Pa v1 -> let v1 = map_parameter env v1 in todo env (v1)
-  | Tp v1 -> let v1 = map_type_parameter env v1 in todo env (v1)
-  | Ta v1 -> let v1 = map_type_argument env v1 in todo env (v1)
-  | Modn v1 -> let v1 = map_module_name env v1 in todo env (v1)
-  | Ce v1 -> let v1 = map_catch_exn env v1 in todo env (v1)
-  | Cs v1 -> let v1 = map_case env v1 in todo env (v1)
-  | ForOrIfComp v1 -> let v1 = map_for_or_if_comp env v1 in todo env (v1)
-  | ModDk v1 -> let v1 = map_module_definition_kind env v1 in todo env (v1)
-  | En v1 -> let v1 = map_entity env v1 in todo env (v1)
-  | Dk v1 -> let v1 = map_definition_kind env v1 in todo env (v1)
-  | Di v1 -> let v1 = map_dotted_ident env v1 in todo env (v1)
-  | Lbli v1 -> let v1 = map_label_ident env v1 in todo env (v1)
-  | Anys v1 -> let v1 = map_of_list (map_any env) v1 in todo env (v1)
+  | E v1 -> let v1 = map_expr env v1 in nothing env (v1)
+  | S v1 -> let v1 = map_stmt env v1 in nothing env (v1)
+  | Ss v1 -> let v1 = map_of_list (map_stmt env) v1 in nothing env (v1)
+  | T v1 -> let v1 = map_type_ env v1 in nothing env (v1)
+  | P v1 -> let v1 = map_pattern env v1 in nothing env (v1)
+  | At v1 -> let v1 = map_attribute env v1 in nothing env (v1)
+  | Fld v1 -> let v1 = map_field env v1 in nothing env (v1)
+  | Flds v1 -> let v1 = map_of_list (map_field env) v1 in nothing env (v1)
+  | Args v1 -> let v1 = map_of_list (map_argument env) v1 in nothing env (v1)
+  | Params v1 -> let v1 = map_of_list (map_parameter env) v1 in nothing env (v1)
+  | Partial v1 -> let v1 = map_partial env v1 in nothing env (v1)
+  | I v1 -> let v1 = map_ident env v1 in nothing env (v1)
+  | Str v1 -> let v1 = map_wrap env map_of_string v1 in nothing env (v1)
+  | Def v1 -> let v1 = map_definition env v1 in nothing env (v1)
+  | Dir v1 -> let v1 = map_directive env v1 in nothing env (v1)
+  | Pr v1 -> let v1 = map_program env v1 in nothing env (v1)
+  | Tk v1 -> let v1 = map_tok env v1 in nothing env (v1)
+  | TodoK v1 -> let v1 = map_todo_kind env v1 in nothing env (v1)
+  | Ar v1 -> let v1 = map_argument env v1 in nothing env (v1)
+  | Pa v1 -> let v1 = map_parameter env v1 in nothing env (v1)
+  | Tp v1 -> let v1 = map_type_parameter env v1 in nothing env (v1)
+  | Ta v1 -> let v1 = map_type_argument env v1 in nothing env (v1)
+  | Modn v1 -> let v1 = map_module_name env v1 in nothing env (v1)
+  | Ce v1 -> let v1 = map_catch_exn env v1 in nothing env (v1)
+  | Cs v1 -> let v1 = map_case env v1 in nothing env (v1)
+  | ForOrIfComp v1 -> let v1 = map_for_or_if_comp env v1 in nothing env (v1)
+  | ModDk v1 -> let v1 = map_module_definition_kind env v1 in nothing env (v1)
+  | En v1 -> let v1 = map_entity env v1 in nothing env (v1)
+  | Dk v1 -> let v1 = map_definition_kind env v1 in nothing env (v1)
+  | Di v1 -> let v1 = map_dotted_ident env v1 in nothing env (v1)
+  | Lbli v1 -> let v1 = map_label_ident env v1 in nothing env (v1)
+  | Anys v1 -> let v1 = map_of_list (map_any env) v1 in nothing env (v1)
   
