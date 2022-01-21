@@ -17,6 +17,7 @@ open Common
 module G = Graph_code
 module E = Entity_code
 module PI = Parse_info
+module H = Graph_code_AST_helpers
 (* open Graph_code_AST_env *)
 
 (*****************************************************************************)
@@ -28,9 +29,6 @@ module PI = Parse_info
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-let split_readable readable =
-  let (d, b, _e) = Common2.dbe_of_filename readable in
-  Common.split "/" d @ [b]
 
 (*****************************************************************************)
 (* Lang-specific helpers *)
@@ -39,11 +37,19 @@ let split_readable readable =
 let top_parent_and_qualifier ~lang ~readable ~ast =
   match lang with
   | Lang.Python ->
-      let xs = split_readable readable in
       let tk = PI.first_loc_of_file readable |> PI.mk_info_of_loc in
+      (* ex: from a/b/foo.py, we want to return 
+       *   - the parent node (a/b/foo, E.File) (without .py extension)
+       *   - the qualifiers [a;b;foo] 
+       *)
+      let (d, b, _e) = Common2.dbe_of_filename readable in
       let dotted_idents =
-        xs |> List.map (fun s -> s, tk) in
-      let node = (readable, E.File) in
+        (Common.split "/" d @ [ b ])
+        |> List.map (fun s -> s, tk) 
+      in
+      (* basically replacing "/" with "." *)
+      let str = H.str_of_dotted_ident dotted_idents in
+      let node = (str, E.File) in
       node, dotted_idents
       
   | Lang.Java ->

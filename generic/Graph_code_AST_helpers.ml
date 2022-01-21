@@ -35,19 +35,39 @@ let string_of_any any =
 (* AST generic accessors helpers *)
 (*****************************************************************************)
 
+(* When we create a node, we need to qualify it fully, because each
+ * node must be unique (no duplicate nodes) *)
 let str_of_dotted_ident xs =
   xs |> List.map fst |> Common.join "."
 
+(* When we lookup things, we actually care only about the last part
+ * of the name as we gradually go down in the graph.
+ *)
+let dotted_ident_of_str str =
+  Common.split "\\." str
+
+let last_ident_of_dotted_ident xs =
+  match List.rev xs with
+  | [] -> raise Impossible
+  | x::_ -> x
+
+(* For now we handle only sample entities like function/class definitions
+ * where the name is a simple identifier.
+ *)
 let ident_of_entity_opt _env ent =
   match ent.name with
   | EN (Id (id, _)) -> Some id
   | _ -> None
 
-
 let entity_kind_of_definition_kind _env defkind =
   match defkind with
   | FuncDef _ -> E.Function (* less: could be also Method *)
   | ClassDef _ -> E.Class
+  (* todo: look for attribute of entity, if Final/Const
+   * TODO: look parent node, if already in a function, then it's
+   * a local.
+   *)
+  | VarDef _ -> E.Global
   | _ -> 
       logger#error "entity kind not handled yet: %s" 
           (string_of_any (Dk defkind));
@@ -57,7 +77,10 @@ let entity_kind_of_definition_kind _env defkind =
 (* Graph builders helpers *)
 (*****************************************************************************)
 
-(* quite similar to create_intermediate_directories_if_not_present *)
+(* quite similar to create_intermediate_directories_if_not_present, but
+ * for Packages.
+ * java-specific?
+ *)
 let create_intermediate_packages_if_not_present g root xs =
   let dirs = Common2.inits xs |> List.map str_of_dotted_ident in
   let dirs =
@@ -87,8 +110,8 @@ let add_use_edge env (name, kind) =
   let dst = (name, kind) in
   (match () with
    | _ when not (G.has_node src env.g) ->
-       pr2 (spf "LOOKUP SRC FAIL %s --> %s, src does not exist???"
-              (G.string_of_node src) (G.string_of_node dst));
+       logger#error "LOOKUP SRC FAIL %s --> %s, src does not exist???"
+              (G.string_of_node src) (G.string_of_node dst);
 
    | _ when G.has_node dst env.g ->
        G.add_edge (src, dst) G.Use env.g
@@ -109,8 +132,8 @@ let add_use_edge env (name, kind) =
                    create_intermediate_packages_if_not_present
                      env.g parent_target
                      (fake_package |> List.map (fun s -> s,()));
-                   pr2 (spf "PB: lookup fail on %s (in %s)"
-                          (G.string_of_node dst) (G.string_of_node src));
+                   logger#error "PB: lookup fail on %s (in %s)"
+                          (G.string_of_node dst) (G.string_of_node src);
                  end;
                  env.g |> G.add_edge (src, dst) G.Use;
                  ()

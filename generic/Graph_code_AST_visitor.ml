@@ -15,6 +15,7 @@
 open Common
 open AST_generic
 module H = Graph_code_AST_helpers
+module L = Graph_code_AST_lookup
 open Graph_code_AST_env
 
 (*****************************************************************************)
@@ -95,10 +96,33 @@ and map_resolved_name_kind env =
 let rec map_name env =
   function
   | Id ((v1, v2)) ->
+      if env.phase = Uses then begin
+      (* !!the uses!! *)
+      (match !(v2.id_resolved) with
+      | Some (ImportedEntity xs, _sid)
+      | Some (ImportedModule (DottedName xs), _sid) ->
+         let n2opt = L.lookup_dotted_ident_opt env xs in
+         (match n2opt with 
+         | None -> ()
+         | Some n2 -> 
+           H.add_use_edge env n2
+         )
+      (* TODO: ImportedModule Filename => lookup E.File *)
+      | _ -> ()
+      );
+      end;
+  (* ----------- *)
+  (* Boilerplate *)
+  (* ----------- *)
       let v1 = map_ident env v1
       and v2 = map_id_info env v2
-      in nothing env (v1, v2)
-  | IdQualified v1 -> let v1 = map_qualified_info env v1 in nothing env (v1)
+      in 
+      nothing env (v1, v2)
+  | IdQualified v1 -> 
+     (* ----------- *)
+     (* Boilerplate *)
+     (* ----------- *)
+      let v1 = map_qualified_info env v1 in nothing env (v1)
 and
   map_qualified_info env
                      {
@@ -889,12 +913,17 @@ and map_entity env { name = v_name; attrs = v_attrs; tparams = v_tparams } =
   let v_tparams = map_type_parameters env v_tparams in
   let v_attrs = map_of_list (map_attribute env) v_attrs in
   let v_name = map_entity_name env v_name in nothing env ()
+
+(* NOT BOILERPLATE, do not call map_name here *)
+and map_name_in_def env v = 
+  ()
+
 and map_entity_name env =
   function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | EN v1 -> let v1 = map_name env v1 in nothing env (v1)
+  | EN v1 -> let v1 = map_name_in_def env v1 in nothing env (v1)
   | EDynamic v1 -> let v1 = map_expr env v1 in nothing env (v1)
   | EPattern v1 -> let v1 = map_pattern env v1 in nothing env (v1)
   | OtherEntity ((v1, v2)) ->

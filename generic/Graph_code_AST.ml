@@ -74,11 +74,11 @@ let extract_defs_uses ~phase ~g ~ast ~lang ~readable =
 
   if phase = Defs then begin
     (match current_parent with
-    | readable, E.File -> 
+    | base, E.File -> 
         let dir = Common2.dirname readable in
         G.create_intermediate_directories_if_not_present g dir;
-        g |> G.add_node (readable, E.File);
-        g |> G.add_edge ((dir, E.Dir), (readable, E.File))  G.Has;
+        g |> G.add_node (base, E.File);
+        g |> G.add_edge ((dir, E.Dir), (base, E.File))  G.Has;
     | n -> 
       failwith (spf "top parent not handled yet: %s" (G.string_of_node n))
     );
