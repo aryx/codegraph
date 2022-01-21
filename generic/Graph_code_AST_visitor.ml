@@ -107,6 +107,13 @@ let rec map_name env =
          | Some n2 -> 
            H.add_use_edge env n2
          )
+      | None -> 
+         (* try locally *)
+         let n2opt = L.lookup_local_file_opt env v1 in
+         n2opt |> Common.do_option (fun n2 ->
+           H.add_use_edge env n2
+         )
+
       (* TODO: ImportedModule Filename => lookup E.File *)
       | _ -> ()
       );
@@ -893,7 +900,7 @@ and map_definition env (v1, v2) =
           then ()
           else begin
            env.g |> G.add_node node;
-           (*env.g |> G.add_nodeinfo node (nodeinfo def.m_var.name);*)
+           env.g |> G.add_nodeinfo node (H.nodeinfo id);
            env.g |> G.add_edge (env.current_parent, node) G.Has;
           end
        end;

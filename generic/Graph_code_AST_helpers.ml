@@ -146,3 +146,10 @@ let add_use_edge env (name, kind) =
             )
        )
   )
+
+let nodeinfo (_id, tk) =
+  { G.pos = Parse_info.unsafe_token_location_of_info tk;
+    props = [];
+    typ = None;
+  }
+  

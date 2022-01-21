@@ -23,7 +23,7 @@ let logger = Logging.get_logger [__MODULE__]
 (* Lookup part of Graph_code_AST.ml
  *
  * alt: 
- *  - the complex stack lookup in stackgraph of github
+ *  - the complex (but very general) stack lookup in stackgraph of github
  *)
 
 (*****************************************************************************)
@@ -59,3 +59,13 @@ let lookup_dotted_ident_opt (env : env) (xs : AST_generic.dotted_ident)  =
   in
   aux G.root xs
 [@@profile]
+
+(* TODO: actually in some language (e.g., Python, Haskell) you can use
+ * definitions defined later in the file, in other (e.g., OCaml, Rust?)
+ * you can't and you can even define multiple times the same name, and 
+ * in other (e.g., C/C++) it depends whether it was "declared" via 
+ * a prototype before.
+ *)
+let lookup_local_file_opt env id =
+  lookup_dotted_ident_opt env (env.file_qualifier @ [id])
+[@@profile]  

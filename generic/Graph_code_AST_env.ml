@@ -39,7 +39,8 @@ type env = {
   (* the current "scope", everthing that is enclosing the current code.
    * less: no support for functors or complex modules *)
   current_qualifier: AST.dotted_ident;
-
+  (* for lookup_local_file_opt *)
+  file_qualifier: AST.dotted_ident;
 
 }
 

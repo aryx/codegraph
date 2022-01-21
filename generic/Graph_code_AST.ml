@@ -70,6 +70,7 @@ let extract_defs_uses ~phase ~g ~ast ~lang ~readable =
     g; phase;
     current_parent;
     current_qualifier;
+    file_qualifier = current_qualifier;
   } in
 
   if phase = Defs then begin

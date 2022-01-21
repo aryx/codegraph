@@ -67,12 +67,6 @@ let str_of_name xs =
 let p_or_l v =
   Ast.unwrap v.name, Ast.is_final v.mods
 
-let nodeinfo ident =
-  { G.pos = Parse_info.unsafe_token_location_of_info (Ast.info_of_ident ident);
-    props = [];
-    typ = None;
-  }
-
 
 let looks_like_class_name s =
   s =~ "[A-Z]"
