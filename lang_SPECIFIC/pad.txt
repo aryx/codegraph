@@ -1,3 +1,5 @@
 See all the pfff/lang_xxx/analyze/graph_code_xxx.ml
+could use pfff as a submodule?
 
+TODO: move pfff-bytecode here
 
