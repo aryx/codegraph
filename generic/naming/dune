@@ -1,7 +1,7 @@
 ; TODO: move in semgrep-core/src/analyzing/ at some point or in deep-semgrep
 
 ; Try to not add too many dependencies in this directory. This library
-; could be used in projects such as codecheck, codemap, efuns,
+; could be used in projects such as codegraph, codecheck, codemap, efuns,
 ; which rely on this pfff-lang_... name and rely on small dependencies.
 (library
  (public_name pfff-lang_GENERIC_graph)

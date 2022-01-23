@@ -1,0 +1,20 @@
+; Try to not add too many dependencies in this directory. This library
+; could be used in projects such as codegraph, codecheck, codemap, efuns,
+; which rely on this pfff-lang_... name and rely on small dependencies.
+(library
+ (public_name pfff-lang_GENERIC_finding)
+ (name pfff_lang_GENERIC_finding)
+ (wrapped false)
+ (libraries
+   commons
+   pfff-h_program-lang
+   pfff-lang_GENERIC_base ; Lang.mk
+
+ )
+ (preprocess
+    (pps
+      ppx_profiling
+      ppx_deriving.show
+    )
+ )
+)
