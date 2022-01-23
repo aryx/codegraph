@@ -1,3 +1,12 @@
+
+
+
+
+(* LOTS OF CODE IN THERE IS REDUNDANT WITH WHAT WE DO FOR AST_generic.ml
+ * IN Naming_ast.ml SO CAN BE SAFELY DELETED.
+ *)
+
+
 (*
  * choices:
  *  - package-based or dir-based schema? Seems simpler to use packages.
@@ -193,13 +202,6 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
   }
   in
 
-  if phase = Defs then begin
-    match ast with
-    | (DirectiveStmt (Package (_, long_ident, _)))::_ ->
-        create_intermediate_packages_if_not_present g G.root long_ident;
-        (* have None usually for scripts, tests, or entry points *)
-    | _ -> xxx
-  end;
   (* double check if we can find some of the imports
    * (especially useful when have a better java_stdlib/ to report
    * third-party packages not-yet handled).

@@ -65,6 +65,7 @@ let top_parent_and_qualifier ~lang ~readable ~ast : G.node * AST_generic.dotted_
           let node = (str, E.Package) in
           node, dotted_idents
       (* can this happen in practice? for test files maybe? *)
+      (* for scripts, tests, or entry points? *)
       | _ -> 
           let node = (readable, E.File) in
           node, []
