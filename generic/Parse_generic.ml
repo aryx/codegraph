@@ -36,7 +36,7 @@ let parse_program lang file =
   match lang with
   | Lang.Python -> 
       let ast = Parse_python.parse_program file in
-      Python_to_generic.program ast
+      Python_to_generic.program ~assign_to_vardef:true ast
   | Lang.Java -> 
       let ast = Parse_java.parse_program file in
       Java_to_generic.program ast

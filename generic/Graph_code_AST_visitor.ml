@@ -196,6 +196,9 @@ and map_expr env { e = v_e; e_id = v_e_id; e_range = v_e_range } =
   let v_e = map_expr_kind env v_e in nothing env ()
 and map_expr_kind env =
   function
+  (* TODO *)
+  | Alias (_, _) -> ()
+
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
