@@ -161,17 +161,6 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
   ignore(lookup_fails);
 
   let env = {
-    current =
-      (match ast with
-       | (DirectiveStmt (Package (_, long_ident, _)))::_ ->
-           (str_of_qualified_ident long_ident, E.Package)
-       | _ ->            (readable, E.File)
-      );
-    current_qualifier =
-      (match ast with
-       | (DirectiveStmt (Package (_, long_ident, _)))::_ -> long_ident
-       | _ -> []
-      );
     imported_namespace =
       (match ast with
        (* we automatically import the current.package.* *)

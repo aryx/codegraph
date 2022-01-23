@@ -82,7 +82,7 @@ let entity_kind_of_definition_kind _env defkind =
  * java-specific?
  *)
 let create_intermediate_packages_if_not_present g root xs =
-  let dirs = Common2.inits xs |> List.map str_of_dotted_ident in
+  let dirs = Common2.inits xs |> List.map (fun xs -> Common.join "." xs) in
   let dirs =
     match dirs with
     | ""::xs -> xs
@@ -129,9 +129,11 @@ let add_use_edge env (name, kind) =
                  let dst = (Common.join "." fake_package, kind_original) in
                  if not (G.has_node dst env.g)
                  then begin
+(* disabled for now
                    create_intermediate_packages_if_not_present
                      env.g parent_target
                      (fake_package |> List.map (fun s -> s,()));
+*)
                    logger#error "PB: lookup fail on %s (in %s)"
                           (G.string_of_node dst) (G.string_of_node src);
                  end;

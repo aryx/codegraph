@@ -80,6 +80,9 @@ let extract_defs_uses ~phase ~g ~ast ~lang ~readable =
         G.create_intermediate_directories_if_not_present g dir;
         g |> G.add_node (base, E.File);
         g |> G.add_edge ((dir, E.Dir), (base, E.File))  G.Has;
+    | str, E.Package ->
+        let xs = H.dotted_ident_of_str str in
+        H.create_intermediate_packages_if_not_present g G.root xs;
     | n -> 
       failwith (spf "top parent not handled yet: %s" (G.string_of_node n))
     );
