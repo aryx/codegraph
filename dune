@@ -1,5 +1,6 @@
+; mostly the same config than in semgrep
 (env
-(dev
-(flags (:standard -w -42-52-6)))
-(release
-(flags (:standard -O3))))
+  (dev
+    (flags (:standard  -w -52-6)))
+  (release
+    (flags (:standard -O3))))

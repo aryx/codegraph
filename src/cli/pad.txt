@@ -1,0 +1,3 @@
+This is ugly but there's need to be a %workspace/src/cli/ directory
+to be able to use semgrep as a submodule otherwise semgrep
+does not compile.

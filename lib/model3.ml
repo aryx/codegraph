@@ -91,7 +91,7 @@ let new_surface ~alpha ~width ~height =
     (if alpha 
     then Cairo.COLOR_ALPHA
     else Cairo.COLOR
-    ) width height
+    ) ~w:width ~h:height
 
 (*****************************************************************************)
 (* Main entry point *)
