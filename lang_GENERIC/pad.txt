@@ -1,0 +1,16 @@
+codegraph_build currently depends on semgrep for building the graph using
+the generic AST. We moved Graph_code_AST.ml in semgrep because
+that's also where Naming_AST.ml is and it simplifies certain things.
+
+However, in the long term we should extract out of
+semgrep the parsers, and analysis using the generic AST, because
+we don't rely on patterns or metavariables of semgrep. We just
+want to reuse all the infrastructure to parse code in a generic
+way using either the parsers in pfff or tree-sitter.
+In the long term, once the APIs are stable, all this parsing infrastructure
+should be in a separate package so we don't need any submodule
+and can just rely on the OPAM package.
+
+The finding/ and parsing/ here are useful only if you don't want to
+depend on tree-sitter (and the very general Parse_target.ml)
+and only use pfff (OCaml-only) parsers.

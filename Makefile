@@ -8,4 +8,7 @@ test:
 install:
 	dune install
 
+setup:
+	git submodule update --init --recursive
+
 .PHONY: all clean install test dump
