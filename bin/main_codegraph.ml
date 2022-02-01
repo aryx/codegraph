@@ -247,7 +247,7 @@ let build_model root =
   let file = dep_file_of_dir root in
   let g = Graph_code.load file in
   let gopti = 
-    Common.cache_computation ~verbose:!verbose file ".opti"
+    Common.cache_computation file ".opti"
       (fun () -> Graph_code_opti.convert g)
   in
   (* todo: find -name "info.txt" *)

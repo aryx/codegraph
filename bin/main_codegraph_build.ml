@@ -104,7 +104,8 @@ let main_action xs =
          let xs = files |> List.map (fun file ->
             logger#info "parsing %s" file;
             file, Parse_generic.parse_and_resolve_name lang file) in
-         Graph_code_AST.build ~root lang xs
+         let hooks = Graph_code_AST.default_hooks in
+         Graph_code_AST.build ~root ~hooks lang xs
     | None ->
        (match !lang_str with
     | "ml_old"  -> 
@@ -193,7 +194,7 @@ let main_action xs =
 let analyze_backward_deps graph_file =
   let g = GC.load graph_file in
   let gopti = 
-    Common.cache_computation ~verbose:!verbose graph_file ".opti"
+    Common.cache_computation graph_file ".opti"
       (fun () -> Graph_code_opti.convert g)
   in
   let config = DM.basic_config_opti gopti in
@@ -244,7 +245,7 @@ let adjust_graph graph_file adjust_file whitelist_file dest_file =
 let test_thrift_alive graph_file =
   let g = GC.load graph_file in
   let gopti = 
-    Common.cache_computation ~verbose:!verbose graph_file ".opti"
+    Common.cache_computation graph_file ".opti"
       (fun () -> Graph_code_opti.convert g)
   in
   let config = DM.basic_config_opti gopti in
