@@ -2,6 +2,11 @@
 
 * Last
 
+*** use model-view-update to simplify the code?
+
+*** move all pfff/todo.txt in codegraph/todo.txt
+
+
 *** OPAM package, people want to install it
 
 *** rewrite using FRP/ELM style?
