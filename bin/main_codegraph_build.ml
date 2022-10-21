@@ -105,7 +105,8 @@ let main_action xs =
             logger#info "parsing %s" file;
             file, Parse_generic.parse_and_resolve_name lang file) in
          let hooks = Graph_code_AST.default_hooks in
-         Graph_code_AST.build ~root ~hooks lang xs
+         let (g, _statsTODO) = Graph_code_AST.build ~root ~hooks lang xs in
+         g, empty
     | None ->
        (match !lang_str with
     | "ml_old"  -> 

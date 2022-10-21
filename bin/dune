@@ -18,7 +18,7 @@
 
     codegraph ; lib/
 
-    ; for codegraph_build, in pfff (now lang_GENERIC/semgrep/.../pfff)
+    ; for codegraph_build, in pfff (hopefully in ~/.opam)
     pfff-lang_python pfff-lang_python-analyze
     pfff-lang_js pfff-lang_js-analyze
     pfff-lang_cpp 
@@ -32,10 +32,13 @@
     pfff-lang_GENERIC_finding
     pfff-lang_GENERIC_parsing
 
-    ; in lang_GENERIC/semgrep now
+    ; in semgrep now (and hopefully installed in ~/.opam via make install in semgrep)
     pfff-lang_GENERIC_base
     pfff-lang_GENERIC-naming
-    
+
+    ; in codegraph now!
+    pfff-lang_GENERIC_linking
+
     ; in lang_SPECIFIC/pfff-bytecode
     pfff-lang_cmt pfff-lang_cmt-analyze
 
