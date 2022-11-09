@@ -11,7 +11,7 @@
 
    pfff-lang_GENERIC_base ; AST_generic.ml
    pfff-lang_GENERIC ; the xxx_to_generic.ml
-   pfff-lang_GENERIC-analyze ; Naming_AST.ml
+   pfff-lang_GENERIC-naming ; Naming_AST.ml
  )
  (preprocess
     (pps
