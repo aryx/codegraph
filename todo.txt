@@ -4,12 +4,11 @@
 
 *** use model-view-update to simplify the code?
 
+*** rewrite using FRP/ELM style?
+
 *** move all pfff/todo.txt in codegraph/todo.txt
 
-
 *** OPAM package, people want to install it
-
-*** rewrite using FRP/ELM style?
 
 *** use bogue with sdl2+cairo instead of lablgtk?
 still weird display bug on macOS?
