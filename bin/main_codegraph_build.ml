@@ -98,7 +98,7 @@ let main_action xs =
   let empty = Graph_code.empty_statistics () in
   let g, stats =
     try (
-    match Lang.lang_of_string_opt !lang_str with
+    match Lang.of_string_opt !lang_str with
     | Some lang -> 
          let files = Find_generic.files_of_root lang root in
          let xs = files |> List.map (fun file ->

@@ -98,6 +98,6 @@ let set_resolved_if_none name dotted_ident =
   match name with
   | AST.Id (_v1, v2) -> (
         match !(v2.id_resolved) with
-        | None -> v2.id_resolved := (Some (ResolvedName (dotted_ident, []), AST.sid_TODO)) ;
+        | None -> v2.id_resolved := (Some (ResolvedName (dotted_ident, []), AST.SId.unsafe_default)) ;
         | _ -> ())
   | _ -> ()

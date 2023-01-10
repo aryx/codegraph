@@ -432,6 +432,7 @@ and map_special env = function
   | Instanceof -> ()
   | Sizeof -> ()
   | Defined -> ()
+  | Require -> ()
   | ConcatString v1 ->
       let v1 = map_concat_string_kind env v1 in
       nothing env v1
@@ -635,7 +636,7 @@ and map_stmt_kind env = function
       nothing env (v1, v2, v3, v4)
   | WithUsingResource (v1, v2, v3) ->
       let v1 = map_tok env v1
-      and v2 = map_stmt env v2
+      and v2 = map_of_list (map_stmt env) v2
       and v3 = map_stmt env v3 in
       nothing env (v1, v2, v3)
   | Assert (v1, v2, v3) ->
@@ -1389,16 +1390,15 @@ and map_directive_kind env = function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | ImportFrom (v1, v2, v3, v4) ->
+  | ImportFrom (v1, v2, v3) ->
       let v1 = map_tok env v1
       and v2 = map_module_name env v2
-      and v3 = map_ident env v3
-      and v4 = map_of_option (map_alias env) v4 in
-      nothing env (v1, v2, v3, v4)
+      and v3 = map_of_list (map_alias env) v3 in
+      nothing env (v1, v2, v3)
   | ImportAs (v1, v2, v3) ->
       let v1 = map_tok env v1
       and v2 = map_module_name env v2
-      and v3 = map_of_option (map_alias env) v3 in
+      and v3 = map_of_option (map_ident_and_id_info env) v3 in
       nothing env (v1, v2, v3)
   | ImportAll (v1, v2, v3) ->
       let v1 = map_tok env v1
@@ -1418,9 +1418,15 @@ and map_directive_kind env = function
       let v1 = map_todo_kind env v1 and v2 = map_of_list (map_any env) v2 in
       nothing env (v1, v2)
 
-and map_alias env (v1, v2) =
+and map_ident_and_id_info env (v1, v2) =
   let v1 = map_ident env v1 and v2 = map_id_info env v2 in
   (v1, v2)
+
+and map_alias env (v1, v2) =
+  let v1 = map_ident env v1 in
+  let v2 = map_of_option (map_ident_and_id_info env) v2 in
+  (v1, v2)
+
 
 (*****************************************************************************)
 (* Toplevel *)
@@ -1441,6 +1447,9 @@ and map_any env = function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
+  | Name v1 ->
+      let v1 = map_name env v1 in
+      nothing env v1
   | Xmls v1 ->
       let v1 = map_of_list (map_xml_body env) v1 in
       nothing env v1
