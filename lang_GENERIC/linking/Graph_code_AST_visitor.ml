@@ -364,6 +364,8 @@ and map_expr_kind env ekind : T.t option =
   | OtherExpr (v1, v2) ->
       let v1 = map_todo_kind env v1 and v2 = map_of_list (map_any env) v2 in
       todo_type
+  | RawExpr _ ->
+      todo_type
 
 (* TODO: return builtin types *)
 and map_literal env x : T.t option =
