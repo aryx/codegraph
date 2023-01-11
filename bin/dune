@@ -8,13 +8,14 @@
     compiler-libs ;; for lang_cmt 
     compiler-libs.common
 
-    commons commons_core
-    pfff-commons-graph ; the code DS of codegraph, Graph_code.t
-
-    pfff-h_files-format
+    ; pfff deps
+    commons
     pfff-config 
     pfff-h_program-lang
     pfff-graph_code
+
+    ; now in codemap
+    pfff-h_files-format
 
     codegraph ; lib/
 
