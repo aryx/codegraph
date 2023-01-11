@@ -70,11 +70,10 @@ let build_stdlib lang root dst =
   let files = Find_source.files_of_root ~lang root in
   match lang with
   | "java" ->
-      Builtins_java.extract_from_sources ~src:root ~dst files
+     Builtins_java.extract_from_sources ~src:root ~dst files
   | "js" ->
-      Stdlib_js.extract_from_sources files dst
+     Stdlib_js.extract_from_sources files dst
   | _ -> failwith ("language not supported: " ^ lang)
-
 
 (*****************************************************************************)
 (* Main action, building the graph *)
