@@ -1,0 +1,13 @@
+(library
+ (public_name pfff_lang_php_analyze2)
+ (wrapped false)
+ (libraries
+
+   commons
+   pfff-config pfff-h_program-lang
+   pfff-graph_code
+   pfff-lang_php ; cst_php
+   pfff-lang_php-analyze ; ast_php
+ )
+ (preprocess (pps ppx_deriving.show))
+)
