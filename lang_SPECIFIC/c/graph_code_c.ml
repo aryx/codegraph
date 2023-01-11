@@ -131,7 +131,7 @@ let hook_use_edge = ref (fun _ctx _in_assign (_src, _dst) _g _loc -> ())
 let hook_def_node = ref (fun _node _g -> ())
 
 (* for datalog *)
-let facts = ref None
+(* TODO let facts = ref None *)
 
 (*****************************************************************************)
 (* Parsing *)
@@ -285,6 +285,7 @@ let unbracket = PI.unbracket
 (*****************************************************************************)
 (* For datalog *)
 (*****************************************************************************)
+(* TODO: need Datalog_c.ml now in trimmed PFFF
 
 (* less: could mv this conrete hooks in datalog_c at some point *)
 let with_datalog_env env f =
@@ -329,6 +330,14 @@ let hook_def env def =
     with_datalog_env env (fun env ->
         let facts = Datalog_c.facts_of_def env def in
         facts |> List.iter (fun fact -> Common.push fact env.Datalog_c.facts))
+
+    *)
+
+let hook_def _env _def =
+   ()
+
+let hook_expr_toplevel _env_orig _x =
+  ()
 
 (*****************************************************************************)
 (* Add Node *)

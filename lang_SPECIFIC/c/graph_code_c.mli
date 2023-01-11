@@ -14,4 +14,6 @@ val hook_use_edge :
 val hook_def_node : (Graph_code.node -> Graph_code.t -> unit) ref
 
 (* if want datalog facts generation *)
+(* TODO
 val facts : Datalog_c.fact list ref option ref
+ *)

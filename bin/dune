@@ -28,6 +28,9 @@
     pfff-lang_php pfff-lang_php-analyze
     pfff-lang_lisp pfff-lang_lisp-analyze
 
+    ; in codemap now
+    layer_code
+
     ; in lang_GENERIC/
     pfff-lang_GENERIC_finding
     pfff-lang_GENERIC_parsing
