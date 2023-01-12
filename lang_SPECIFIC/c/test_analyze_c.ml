@@ -81,6 +81,6 @@ let test_dataflow_c file =
 
 let actions () =
   [
-    ("-dump_cil", " <file>", Common.mk_action_1_arg test_dump_cil);
-    ("-dataflow_c", "   <file>", Common.mk_action_1_arg test_dataflow_c);
+    ("-dump_cil", " <file>", Arg_helpers.mk_action_1_arg test_dump_cil);
+    ("-dataflow_c", "   <file>", Arg_helpers.mk_action_1_arg test_dataflow_c);
   ]

@@ -7,4 +7,4 @@ val gen_rank_heatmap_layer :
 val gen_statistics_layer :
   root:Common.dirname -> Graph_code.statistics -> output:Common.filename -> unit
 
-val actions : unit -> Common.cmdline_actions
+val actions : unit -> Arg_helpers.cmdline_actions

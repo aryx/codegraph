@@ -390,7 +390,7 @@ let test_dotfile_of_dotdepend file =
 let extra_actions () = [
 
   "-to_json", " <graph file>", 
-  Common.mk_action_1_arg (fun file ->
+  Arg_helpers.mk_action_1_arg (fun file ->
     let g = Graph_code.load file in
     let json = Graph_code_export.graph_to_json g in
     let dst = "graph_code.json" in
@@ -400,33 +400,33 @@ let extra_actions () = [
   );
 
   "-build_stdlib", " <src> <dst>",
-  Common.mk_action_2_arg (fun dir dst -> build_stdlib !lang_str dir dst);
+  Arg_helpers.mk_action_2_arg (fun dir dst -> build_stdlib !lang_str dir dst);
   "-adjust_graph", " <graph> <adjust_file> <whitelist> <dstfile>\n",
-  Common.mk_action_4_arg (fun graph file file2 dst -> 
+  Arg_helpers.mk_action_4_arg (fun graph file file2 dst -> 
     adjust_graph graph file file2 dst);
 
 
   "-test_backward_deps", " <graph>",
-  Common.mk_action_1_arg (fun graph_file -> 
+  Arg_helpers.mk_action_1_arg (fun graph_file -> 
     analyze_backward_deps graph_file
   );
   "-test_protected_to_private", " <graph>",
-  Common.mk_action_1_arg (fun graph_file ->
+  Arg_helpers.mk_action_1_arg (fun graph_file ->
     let g = Graph_code.load graph_file in
     Graph_code_class_analysis.protected_to_private_candidates g
   );
   "-test_thrift_alive", " <graph>",
-  Common.mk_action_1_arg test_thrift_alive;
+  Arg_helpers.mk_action_1_arg test_thrift_alive;
   "-test_pad", " <graph>",
-  Common.mk_action_1_arg test_adhoc_deps;
+  Arg_helpers.mk_action_1_arg test_adhoc_deps;
   "-test_layering", " <graph>",
-  Common.mk_action_1_arg test_layering;
+  Arg_helpers.mk_action_1_arg test_layering;
   "-test_xta", " <graph>",
-  Common.mk_action_1_arg test_xta;
+  Arg_helpers.mk_action_1_arg test_xta;
   "-test_dotfile_of_deps", " <dir>",
-  Common.mk_action_1_arg test_dotfile_of_deps;
+  Arg_helpers.mk_action_1_arg test_dotfile_of_deps;
   "-test_dotfile_of_dotdepend", " <file>",
-  Common.mk_action_1_arg test_dotfile_of_dotdepend;
+  Arg_helpers.mk_action_1_arg test_dotfile_of_dotdepend;
 ]
 
 (*****************************************************************************)
@@ -455,7 +455,7 @@ let options () = [
   "-no_fake_node", Arg.Clear Graph_code_php.add_fake_node_when_undefined_entity,
   " no fake nodes when use-def mismatches\n";
   ] @
-  Common.options_of_actions action (all_actions()) @
+  Arg_helpers.options_of_actions action (all_actions()) @
   Common2.cmdline_flags_devel () @
   [
   "-verbose", Arg.Unit (fun () ->
@@ -500,7 +500,7 @@ let main () =
 
   
   (* does side effect on many global flags *)
-  let args = Common.parse_options (options()) usage_msg Sys.argv in
+  let args = Arg_helpers.parse_options (options()) usage_msg Sys.argv in
 
   (* must be done after Arg.parse, because Common.profile is set by it *)
   Common.profile_code "Main total" (fun () -> 
@@ -508,8 +508,8 @@ let main () =
     (* --------------------------------------------------------- *)
     (* actions, useful to debug subpart *)
     (* --------------------------------------------------------- *)
-    | xs when List.mem !action (Common.action_list (all_actions())) -> 
-        Common.do_action !action xs (all_actions())
+    | xs when List.mem !action (Arg_helpers.action_list (all_actions())) -> 
+        Arg_helpers.do_action !action xs (all_actions())
 
     | _ when not (Common.null_string !action) -> 
         failwith ("unrecognized action or wrong params: " ^ !action)
@@ -524,7 +524,7 @@ let main () =
     (* empty entry *)
     (* --------------------------------------------------------- *)
     | [] -> 
-        Common.usage usage_msg (options())
+        Arg_helpers.usage usage_msg (options())
     )
   )
 
