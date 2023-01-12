@@ -5,7 +5,7 @@
  (libraries
 
    commons
-   pfff-config pfff-h_program-lang
+   pfff-h_program-lang
    pfff-graph_code
    pfff-lang_java
  )

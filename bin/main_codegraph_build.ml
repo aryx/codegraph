@@ -464,7 +464,7 @@ let options () = [
   ), " ";
 
   "-version",   Arg.Unit (fun () -> 
-    pr2 (spf "CodeGraph version: %s" Config_pfff.version);
+    pr2 (spf "CodeGraph build version: %s" "TODO: version");
     exit 0;
   ), 
   " guess what";
