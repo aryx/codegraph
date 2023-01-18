@@ -4,10 +4,10 @@
  (wrapped false)
  (libraries
 
-   commons
+   commons profiling process_limits
    pfff-h_program-lang
-   pfff-graph_code
-   pfff-lang_js
+   graph_code
+   parser_javascript.ast parser_javascript.menhir
  )
- (preprocess (pps ppx_deriving.show))
+ (preprocess (pps ppx_deriving.show ppx_profiling))
 )

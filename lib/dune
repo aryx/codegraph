@@ -6,7 +6,11 @@
    cairo2
    cairo2-gtk
 
-   commons pfff-h_visualization gui
-   pfff-graph_code pfff-h_program-lang
+   commons
+   pfff-h_program-lang
+   graph_code
+   pfff-h_visualization
+   gui
  )
+ (preprocess (pps ppx_deriving.show ppx_profiling))
 )

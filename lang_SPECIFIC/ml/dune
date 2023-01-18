@@ -4,10 +4,10 @@
  (wrapped false)
  (libraries
 
-   commons
+   commons profiling
    pfff-h_program-lang
-   pfff-graph_code
-   pfff-lang_ml
+   graph_code
+   parser_ocaml.ast parser_ocaml.menhir
  )
- (preprocess (pps ppx_deriving.show))
+ (preprocess (pps ppx_deriving.show ppx_profiling))
 )

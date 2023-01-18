@@ -108,7 +108,7 @@ let parse file =
     try
       Parse_js.parse_program file
     with
-    | Timeout _ as exn -> Exception.catch_and_reraise exn
+    | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
     | exn ->
         let e = Exception.catch exn in
         pr2 (spf "PARSE ERROR with %s, exn = %s" file (Exception.to_string e));

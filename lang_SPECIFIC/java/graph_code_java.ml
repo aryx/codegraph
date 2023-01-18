@@ -102,7 +102,7 @@ and phase = Defs | Inheritance | Uses
 
 let parse ~show_parse_error file =
   try Parse_java.parse_program file with
-  | Timeout _ as exn -> Exception.catch_and_reraise exn
+  | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
   | exn ->
       let e = Exception.catch exn in
       if show_parse_error then
@@ -214,7 +214,7 @@ let add_use_edge env (name, kind) =
 let _hmemo = Hashtbl.create 101
 
 let lookup_fully_qualified_memoized env x =
-  Common.profile_code "Graph_java.lookup_qualified" (fun () ->
+  Profiling.profile_code "Graph_java.lookup_qualified" (fun () ->
       if env.phase = Uses || env.phase = Inheritance then
         Common.memoized _hmemo x (fun () ->
             Package_java.lookup_fully_qualified2 env.g x)
@@ -243,15 +243,14 @@ let with_full_qualifier env xs =
  *
  * Note that the code graph store nodes in fully qualified form.
  *)
-let (lookup2 : env -> Ast.qualified_ident -> Graph_code.node option) =
+let (lookup : env -> Ast.qualified_ident -> Graph_code.node option) =
  fun env xs ->
   let candidates = with_full_qualifier env xs in
   (* pr2_gen candidates; *)
   candidates
   |> Common.find_some_opt (fun full_qualifier ->
          lookup_fully_qualified_memoized env full_qualifier)
-
-let lookup a b = Common.profile_code "Graph_java.lookup" (fun () -> lookup2 a b)
+[@@profiling]
 
 (* pre: the Inheritance phase must have been done already
  * otherwise parents_inheritance can be empty or incomplete.

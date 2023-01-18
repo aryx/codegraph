@@ -8,10 +8,9 @@
     compiler-libs ;; for lang_cmt 
     compiler-libs.common
 
-    ; pfff deps
-    commons
+    commons profiling
     pfff-h_program-lang
-    pfff-graph_code
+    graph_code
 
     ; now in codemap
     pfff-h_files-format
@@ -19,15 +18,29 @@
 
     codegraph ; lib/
 
+    ; for find_source, the find_source_files_or...
+    parser_php.ast
+    parser_cpp.ast
+    parser_c.ast
+    parser_lisp.ast
+
     ; for codegraph_build, in pfff (hopefully in ~/.opam)
-    pfff-lang_python
-    pfff-lang_js pfff-lang_js-analyze
-    pfff-lang_cpp 
-    pfff-lang_c pfff-lang_c-analyze
-    pfff-lang_ml
-    pfff-lang_java pfff-lang_java-analyze
-    pfff-lang_php pfff-lang_php-analyze pfff_lang_php_analyze2
-    pfff-lang_lisp pfff-lang_lisp-analyze
+    pfff-lang_java-analyze ; Builtins_java
+    pfff-lang_js-analyze ; Stdlib_js
+    pfff-lang_ml-analyze
+    parser_cpp.menhir ; Parse_cpp.init_defs
+    pfff-lang_c-analyze
+    pfff_lang_php_analyze
+    pfff-lang_lisp-analyze
+
+    ;pfff-lang_python
+    ;pfff-lang_js pfff-lang_js-analyze
+    ;pfff-lang_cpp 
+    ;pfff-lang_c pfff-lang_c-analyze
+    ;pfff-lang_ml
+    ;pfff-lang_java pfff-lang_java-analyze
+    ;pfff-lang_php pfff-lang_php-analyze pfff_lang_php_analyze2
+    ;pfff-lang_lisp pfff-lang_lisp-analyze
 
     ; in codemap now
     layer_code
@@ -37,7 +50,6 @@
     pfff-lang_GENERIC_parsing
 
     ; in semgrep now (and hopefully installed in ~/.opam via make install in semgrep)
-    pfff-lang_GENERIC_base
     pfff-lang_GENERIC-naming
 
     ; in codegraph now!
@@ -49,6 +61,8 @@
  )
  ; for ocamldebug
  (modes native byte)
+
+ (preprocess (pps ppx_deriving.show ppx_profiling))
 )
 
 

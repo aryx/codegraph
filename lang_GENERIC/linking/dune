@@ -2,6 +2,7 @@
 ; used to be in pfff and is still used in projects outside semgrep (e.g.,
 ; codegraph/codecheck) which rely on this pfff-lang_... name and rely on
 ; small dependencies.
+
 (library
  (public_name pfff-lang_GENERIC_linking)
  (name pfff_lang_GENERIC_linking)
@@ -9,9 +10,9 @@
  (libraries
    commons
 
-   pfff-graph_code ; in pfff
-   pfff-lang_GENERIC ; actually now in semgrep
-   ;deep_utils
+   graph_code ; in semgrep now
+   ast_generic ; actually now in semgrep
+   semgrep.core ; just Lang.t I think
  )
  (preprocess
     (pps

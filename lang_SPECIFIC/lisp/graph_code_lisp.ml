@@ -60,7 +60,7 @@ let _hmemo = Hashtbl.create 101
 let parse file =
   Common.memoized _hmemo file (fun () ->
       try Parse_lisp.parse_program file with
-      | Timeout _ as exn -> Exception.catch_and_reraise exn
+      | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
       | exn ->
           let e = Exception.catch exn in
           pr2_once

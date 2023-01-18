@@ -147,7 +147,7 @@ let parse ~show_parse_error file =
             Common.save_excursion Flag.verbose_parsing show_parse_error
               (fun () -> Parse_c.parse_program file)))
   with
-  | Timeout _ as exn -> Exception.catch_and_reraise exn
+  | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
   | exn ->
       let e = Exception.catch exn in
       pr2_once (spf "PARSE ERROR with %s, exn = %s" file (Common.exn_to_s exn));

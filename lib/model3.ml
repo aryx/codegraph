@@ -104,7 +104,7 @@ let init_world ?(width = 600) ?(height = 600) path model =
   let config, gopti = DMBuild.config_of_path path model.gopti in
   model.gopti <- gopti;
   let m, gopti = 
-    Common.profile_code "Model.building matrix" (fun () -> 
+    Profiling.profile_code "Model.building matrix" (fun () -> 
       DMBuild.build config (Some model.constraints) model.gopti
     )
   in
@@ -199,5 +199,5 @@ let find_region_at_user_point2 w ~x ~y =
   )
 
 let find_region_at_user_point w ~x ~y =
-  Common.profile_code "model.find_region" (fun () ->
+  Profiling.profile_code "model.find_region" (fun () ->
     find_region_at_user_point2 w ~x ~y)

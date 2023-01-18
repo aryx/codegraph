@@ -510,7 +510,7 @@ let recompute_matrix w =
   let config, gopti = DMBuild.config_of_path w.path w.model.gopti in
   w.model.gopti <- gopti;
   let m, gopti = 
-    Common.profile_code "Model.building matrix" (fun () -> 
+    Profiling.profile_code "Model.building matrix" (fun () -> 
       DMBuild.build config (Some w.model.constraints) w.model.gopti
     )
   in

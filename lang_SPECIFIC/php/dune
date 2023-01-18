@@ -1,13 +1,12 @@
 (library
- (public_name pfff_lang_php_analyze2)
+ (public_name pfff_lang_php_analyze)
  (wrapped false)
  (libraries
 
-   commons
+   commons profiling process_limits
    pfff-h_program-lang
-   pfff-graph_code
-   pfff-lang_php ; cst_php
-   pfff-lang_php-analyze ; ast_php
+   graph_code
+   parser_php.ast parser_php.menhir
  )
- (preprocess (pps ppx_deriving.show))
+ (preprocess (pps ppx_deriving.show ppx_profiling))
 )

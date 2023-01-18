@@ -148,7 +148,7 @@ let parse env file =
         let ast = Ast_php_build.program cst in
         ast)
   with
-  | Timeout _ as exn -> Exception.catch_and_reraise exn
+  | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
   | exn ->
       let e = Exception.catch exn in
       env.stats.G.parse_errors |> Common.push file;
@@ -367,7 +367,7 @@ let add_node_and_has_edge2 ?(props = []) env (ident, kind) =
   else { env with cur = { env.cur with node } }
 
 let add_node_and_has_edge ?props a b =
-  Common.profile_code "Graph_php.add_node_and_has_edge" (fun () ->
+  Profiling.profile_code "Graph_php.add_node_and_has_edge" (fun () ->
       add_node_and_has_edge2 ?props a b)
 
 (*****************************************************************************)
@@ -399,7 +399,7 @@ let lookup_fail env tokopt dst =
 (* G.parent is extremely slow in ocamlgraph so need memoize *)
 let _hmemo_class_exits = Hashtbl.create 101
 
-let class_exists2 env (R aclass) _tokopt =
+let class_exists env (R aclass) _tokopt =
   assert (env.phase = Uses);
   let node = (aclass, E.Class) in
   let node' = (normalize aclass, E.Class) in
@@ -407,9 +407,7 @@ let class_exists2 env (R aclass) _tokopt =
       (* opti: this is super slow: G.parent node env.g <> G.not_found *)
       (G.has_node node env.g && Hashtbl.mem env.not_found node)
       || Hashtbl.mem env.case_insensitive node')
-
-let class_exists a b c =
-  Common.profile_code "Graph_php.class_exits" (fun () -> class_exists2 a b c)
+[@@profiling]
 
 (*****************************************************************************)
 (* Add edge *)
@@ -466,7 +464,7 @@ let rec add_use_edge2 env (name, kind) =
                 env.g |> G.add_edge (src, dst) G.Use)))
 
 let add_use_edge_bis a b =
-  Common.profile_code "Graph_php.add_use_edge" (fun () -> add_use_edge2 a b)
+  Profiling.profile_code "Graph_php.add_use_edge" (fun () -> add_use_edge2 a b)
 
 let add_use_edge ?(phase = Uses) env n =
   match phase with
@@ -510,7 +508,7 @@ let add_use_edge_maybe_class env entity tokopt =
 (* assume namespace has been resolved so aclass is fully resolved
  * less: handle privacy?
  *)
-let lookup_inheritance2 g (R aclass, amethod_or_field_or_constant) tokopt =
+let lookup_inheritance g (R aclass, amethod_or_field_or_constant) tokopt =
   let rec depth current =
     if
       not (G.has_node current g)
@@ -545,9 +543,7 @@ let lookup_inheritance2 g (R aclass, amethod_or_field_or_constant) tokopt =
           breath parents_inheritance
   and breath xs = xs |> Common.find_some_opt depth in
   depth (aclass, E.Class)
-
-let lookup_inheritance g a b =
-  Common.profile_code "Graph_php.lookup" (fun () -> lookup_inheritance2 g a b)
+[@@profiling]
 
 let add_use_edge_lookup2 xhp env (name, ident) kind =
   let aclass = str_of_name env name E.Class in
@@ -602,7 +598,9 @@ let add_use_edge_lookup2 xhp env (name, ident) kind =
    * filter classes.
    *)
   if afld =$= "__construct" then add_use_edge_bis env (name, E.Class)
+[@@profiling]
 
+(* TODO: diff with add_use_edge_lookup ?? *)
 let add_use_edge_lookup ?(xhp = false) env a b =
   env.phase_use_lookup |> Common.push (env.cur, (xhp, a, b))
 
@@ -1127,7 +1125,7 @@ let build ?(verbose = true)
 
   (* step1: creating the nodes and 'Has' edges, the defs *)
   env.pr2_and_log "\nstep1: extract defs";
-  Common.profile_code "Graph_php.step1" (fun () ->
+  Profiling.profile_code "Graph_php.step1" (fun () ->
       files
       |> Console.progress ~show:verbose (fun k ->
              List.iter (fun file ->
@@ -1136,7 +1134,7 @@ let build ?(verbose = true)
                  let ast = parse env file in
                  (* will modify env.dupes instead of raise Graph_code.NodeAlreadyPresent *)
                  extract_defs_uses { env with phase = Defs } ast readable)));
-  Common.profile_code "Graph_php.step dupes" (fun () ->
+  Profiling.profile_code "Graph_php.step dupes" (fun () ->
       Common2.hkeys env.dupes
       |> List.filter (fun (_, kind) ->
              match kind with
@@ -1195,7 +1193,7 @@ let build ?(verbose = true)
 
     (* step2: creating the 'Use' edges for inheritance *)
     envold.pr2_and_log "\nstep2: extract inheritance";
-    Common.profile_code "Graph_php.step2" (fun () ->
+    Profiling.profile_code "Graph_php.step2" (fun () ->
         !(envold.phase_inheritance)
         |> List.rev
         |> List.iter (fun (cur, n) ->
@@ -1204,7 +1202,7 @@ let build ?(verbose = true)
         envold.phase_inheritance := []);
     (* step3: creating the 'Use' edges, the uses *)
     envold.pr2_and_log "\nstep3: extract uses";
-    Common.profile_code "Graph_php.step3" (fun () ->
+    Profiling.profile_code "Graph_php.step3" (fun () ->
         !(envold.phase_use) |> List.rev
         |> List.iter (fun (cur, n) ->
                let env = { envold with phase = Uses; cur } in
@@ -1223,7 +1221,7 @@ let build ?(verbose = true)
 
     if class_analysis then (
       envold.pr2_and_log "\nstep4: class analysis";
-      Common.profile_code "Graph_php.step4" (fun () ->
+      Profiling.profile_code "Graph_php.step4" (fun () ->
           let dag = Graph_code_class_analysis.class_hierarchy g in
           let htoplevels = Graph_code_class_analysis.toplevel_methods g dag in
           !(envold.phase_class_analysis)

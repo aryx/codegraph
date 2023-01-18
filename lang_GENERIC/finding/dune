@@ -8,7 +8,7 @@
  (libraries
    commons
    pfff-h_program-lang
-   pfff-lang_GENERIC_base ; Lang.mk
+   semgrep.core ; for Lang.ml, could move out of semgrep
 
  )
  (preprocess
