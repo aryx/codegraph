@@ -50,7 +50,7 @@ let (lookup_fully_qualified2 :
                  (* issue warnings lazily, only when the ambiguity concerns
                   * something we are actually looking for
                   *)
-                 && k =$= x
+                 && k = x
                then (
                  (* todo: this will be a problem when go from class-level
                   * to method/field level dependencies
@@ -66,7 +66,7 @@ let (lookup_fully_qualified2 :
         let new_current =
           children
           |> Common.find_some_opt (fun (s2, kind) ->
-                 if str =$= s2 then Some (s2, kind) else None)
+                 if str = s2 then Some (s2, kind) else None)
         in
         match new_current with
         (* less: could return at least what we were able to resolve *)

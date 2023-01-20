@@ -53,7 +53,7 @@ let gen_package_file_with_class_defs pr xs g =
 let extract_from_sources ~src ~dst files =
   let g = Graph_code_java.build ~verbose:false ~only_defs:true src files in
 
-  Common.command2 ("mkdir -p " ^ dst);
+  Sys.command ("mkdir -p " ^ dst) |> ignore;
 
   let rec aux current =
     let xs = G.children current g in

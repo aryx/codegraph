@@ -163,7 +163,7 @@ let error s tok = failwith (spf "%s: %s" (Parse_info.string_of_info tok) s)
  * dupes we locally rename those entities, e.g. main -> main__234.
  *)
 let new_name_if_defs env (s, tok) =
-  if env.phase = Defs then (
+  if env.phase =*= Defs then (
     if Hashtbl.mem env.local_rename s then
       error (spf "Duped new name: %s" s) tok;
     let s2 = Graph_code.gensym s in
@@ -233,7 +233,7 @@ let find_existing_node_opt env name candidates last_resort =
   let s = Ast.str_of_name name in
   let kind_with_a_dupe =
     candidates
-    |> Common.find_opt (fun kind ->
+    |> List.find_opt (fun kind ->
            Hashtbl.mem env.dupes (s, kind)
            && kind <> E.Prototype && kind <> E.GlobalExtern)
   in
@@ -278,7 +278,7 @@ let find_existing_node_opt env name candidates last_resort =
               None))
 
 let is_local env s =
-  Common.find_opt (fun (x, _) -> x =$= s) !(env.locals) <> None
+  List.find_opt (fun (x, _) -> x = s) !(env.locals) <> None
 
 let unbracket = PI.unbracket
 
@@ -352,7 +352,7 @@ let add_node_and_edge_if_defs_mode env (name, kind) typopt =
   in
   let node = (str', kind) in
 
-  (if env.phase = Defs then
+  (if env.phase =*= Defs then
    match () with
    (* if parent is a dupe, then don't want to attach yourself to the
     * original parent, mark this child as a dupe too.
@@ -450,7 +450,7 @@ let add_use_edge env (name, kind) =
         (spf "skipping edge (%s -> %s), one of it is a dupe"
            (G.string_of_node src) (G.string_of_node dst))
   (* plan9, those are special functions in kencc? *)
-  | _ when s =$= "USED" || s =$= "SET" -> ()
+  | _ when s = "USED" || s = "SET" -> ()
   | _ when not (G.has_node src env.g) ->
       error
         (spf "SRC FAIL: %s (-> %s)" (G.string_of_node src)
@@ -484,7 +484,7 @@ let add_use_edge env (name, kind) =
 (*****************************************************************************)
 
 let rec extract_defs_uses env ast =
-  if env.phase = Defs then (
+  if env.phase =*= Defs then (
     let dir = Common2.dirname env.c_file_readable in
     G.create_intermediate_directories_if_not_present env.g dir;
     let node = (env.c_file_readable, E.File) in
@@ -507,7 +507,7 @@ and directive env x =
       in
       let env = add_node_and_edge_if_defs_mode env (name, E.Constant) None in
       hook_def env (DirStmt x);
-      if env.phase = Uses && env.conf.macro_dependencies then
+      if env.phase =*= Uses && env.conf.macro_dependencies then
         Option.iter (define_body env) body
   | Macro (_t, name, params, body) ->
       let name =
@@ -523,7 +523,7 @@ and directive env x =
               (params |> List.map (fun p -> (Ast.str_of_name p, None (*TAny*))));
         }
       in
-      if env.phase = Uses && env.conf.macro_dependencies then
+      if env.phase =*= Uses && env.conf.macro_dependencies then
         Option.iter (define_body env) body
   (* less: should analyze if s has the form "..." and not <> and
    * build appropriate link? but need to find the real File
@@ -579,7 +579,7 @@ and definition env x =
                      | Some n -> Some (Ast.str_of_name n, Some x.p_type)))
           in
           let env = { env with locals = ref xs } in
-          if env.phase = Uses then stmts env (unbracket def.f_body)
+          if env.phase =*= Uses then stmts env (unbracket def.f_body)
       | _ -> raise Impossible)
   | VarDef v -> (
       let { v_name = name; v_type = t; v_storage = sto; v_init = eopt } = v in
@@ -598,9 +598,9 @@ and definition env x =
         (* when have 'int x = 1;' in a header, it's actually the def.
          * less: print a warning asking to mv in a .c
          *)
-        | _, _, Some _ when kind_file env = Header -> E.Global
+        | _, _, Some _ when kind_file env =*= Header -> E.Global
         (* less: print a warning; they should put extern decl *)
-        | _, _, _ when kind_file env = Header -> E.GlobalExtern
+        | _, _, _ when kind_file env =*= Header -> E.GlobalExtern
         | DefaultStorage, _, _
         | Static, _, _ ->
             E.Global
@@ -620,7 +620,7 @@ and definition env x =
           let env = add_node_and_edge_if_defs_mode env (name, kind) typ in
           hook_def env (DefStmt x);
           type_ env t;
-          if env.phase = Uses then
+          if env.phase =*= Uses then
             eopt
             |> Option.iter (fun e ->
                    let n = name in
@@ -637,7 +637,7 @@ and definition env x =
       let name = add_prefix prefix name in
       let s = Ast.str_of_name name in
 
-      if env.phase = Defs then
+      if env.phase =*= Defs then
         if Hashtbl.mem env.structs s then
           let old = Hashtbl.find env.structs s in
 
@@ -702,14 +702,14 @@ and definition env x =
              let env =
                add_node_and_edge_if_defs_mode env (name, E.Constructor) None
              in
-             if env.phase = Uses then Common2.opt (expr_toplevel env) eopt);
+             if env.phase =*= Uses then Common2.opt (expr_toplevel env) eopt);
       (* subtle: called here after all the local renames have been created! *)
       hook_def env (DefStmt x)
       (* I am not sure about the namespaces, so I prepend strings *)
   | TypeDef { t_name = name; t_type = t } ->
       let s = Ast.str_of_name name in
       let name = add_prefix "T__" name in
-      if env.phase = Defs then
+      if env.phase =*= Defs then
         if Hashtbl.mem env.typedefs s then
           let old = Hashtbl.find env.typedefs s in
           if
@@ -943,7 +943,7 @@ and args env xs = xs |> List.iter (function Arg e -> expr env e)
 (* ---------------------------------------------------------------------- *)
 
 and type_ env typ =
-  if env.phase = Uses && env.conf.types_dependencies then
+  if env.phase =*= Uses && env.conf.types_dependencies then
     let t = final_type env typ in
     let rec aux t =
       match t with
@@ -969,7 +969,7 @@ and type_ env typ =
             (* right now 'typedef enum { ... } X' results in X being
              * typedefed to ... itself
              *)
-            if t' = t then add_use_edge env (add_prefix "T__" name, E.Type)
+            if t' =*= t then add_use_edge env (add_prefix "T__" name, E.Type)
               (* should be done in expand_typedefs? unless we had a dupe *)
             else
               env.pr2_and_log

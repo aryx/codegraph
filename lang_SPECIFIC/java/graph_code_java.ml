@@ -215,7 +215,7 @@ let _hmemo = Hashtbl.create 101
 
 let lookup_fully_qualified_memoized env x =
   Profiling.profile_code "Graph_java.lookup_qualified" (fun () ->
-      if env.phase = Uses || env.phase = Inheritance then
+      if env.phase =*= Uses || env.phase =*= Inheritance then
         Common.memoized _hmemo x (fun () ->
             Package_java.lookup_fully_qualified2 env.g x)
       else Package_java.lookup_fully_qualified2 env.g x)
@@ -327,7 +327,7 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
     }
   in
 
-  (if phase = Defs then
+  (if phase =*= Defs then
    match ast with
    | DirectiveStmt (Package (_, long_ident, _)) :: _ ->
        create_intermediate_packages_if_not_present g G.root long_ident
@@ -341,7 +341,7 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
    * (especially useful when have a better java_stdlib/ to report
    * third-party packages not-yet handled).
    *)
-  if phase = Inheritance then
+  if phase =*= Inheritance then
     ast
     |> List.iter (function
          | DirectiveStmt (Import (_is_static, _import)) -> (
@@ -390,7 +390,7 @@ and decl env = function
       let full_ident = env.current_qualifier @ [ (name, fakeInfo name) ] in
       let full_str = str_of_qualified_ident full_ident in
       let node = (full_str, E.TopStmts) in
-      if env.phase = Defs then (
+      if env.phase =*= Defs then (
         env.g |> G.add_node node;
         env.g |> G.add_edge (env.current, node) G.Has);
       let env = { env with current = node; current_qualifier = full_ident } in
@@ -404,7 +404,7 @@ and class_decl env def =
   let full_ident = env.current_qualifier @ [ def.cl_name ] in
   let full_str = str_of_qualified_ident full_ident in
   let node = (full_str, E.Class) in
-  if env.phase = Defs then (
+  if env.phase =*= Defs then (
     (* less: def.c_type? *)
     env.g |> G.add_node node;
     env.g |> G.add_nodeinfo node (nodeinfo def.cl_name);
@@ -427,7 +427,7 @@ and class_decl env def =
   List.iter (typ env) parents;
 
   let imports =
-    if env.phase = Defs then []
+    if env.phase =*= Defs then []
     else
       (* Java allows programmer to use fields without qualifying them
        * (without a class.xxx, or this.xxx) so we need to unsugar this
@@ -449,7 +449,7 @@ and method_decl env def =
   let full_ident = env.current_qualifier @ [ def.m_var.name ] in
   let full_str = str_of_qualified_ident full_ident in
   let node = (full_str, E.Method) in
-  if env.phase = Defs then
+  if env.phase =*= Defs then
     if
       (* less: static? *)
       (* less: for now we just collapse all methods with same name together *)
@@ -503,7 +503,7 @@ and field_decl env def =
     if Ast.is_final_static def.f_var.mods then E.Constant else E.Field
   in
   let node = (full_str, kind) in
-  if env.phase = Defs then (
+  if env.phase =*= Defs then (
     (* less: static? *)
     env.g |> G.add_node node;
     env.g |> G.add_nodeinfo node (nodeinfo def.f_var.name);
@@ -518,7 +518,7 @@ and enum_decl env def =
   let full_str = str_of_qualified_ident full_ident in
   (* less: make it a class? or a Type? *)
   let node = (full_str, E.Class) in
-  if env.phase = Defs then (
+  if env.phase =*= Defs then (
     env.g |> G.add_node node;
     env.g |> G.add_nodeinfo node (nodeinfo def.en_name);
     env.g |> G.add_edge (env.current, node) G.Has);
@@ -542,7 +542,7 @@ and enum_decl env def =
          let full_ident = env.current_qualifier @ [ ident ] in
          let full_str = str_of_qualified_ident full_ident in
          let node = (full_str, E.Constant) in
-         if env.phase = Defs then (
+         if env.phase =*= Defs then (
            env.g |> G.add_node node;
            env.g |> G.add_nodeinfo node (nodeinfo ident);
            env.g |> G.add_edge (env.current, node) G.Has);
@@ -808,7 +808,7 @@ and typ env = function
       (* todo: let's forget generic arguments for now *)
       let xs = long_ident_of_class_type reft in
       let str = str_of_qualified_ident xs in
-      if env.phase = Uses || env.phase = Inheritance then
+      if env.phase =*= Uses || env.phase =*= Inheritance then
         match (str, reft) with
         (* TODO: look at the type and continue lookup *)
         | _, ((s, _), _) :: _rest when List.mem s env.type_parameters -> ()

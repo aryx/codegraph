@@ -380,7 +380,7 @@ let lookup_fail env tokopt dst =
     (Parse_info.file_of_info info, Parse_info.line_of_info info)
   in
   let fprinter =
-    if env.phase = Inheritance then env.pr2_and_log
+    if env.phase =*= Inheritance then env.pr2_and_log
     else if file =~ ".*third-party" || file =~ ".*third_party" then fun _s -> ()
     else
       match snd dst with
@@ -400,7 +400,7 @@ let lookup_fail env tokopt dst =
 let _hmemo_class_exits = Hashtbl.create 101
 
 let class_exists env (R aclass) _tokopt =
-  assert (env.phase = Uses);
+  assert (env.phase =*= Uses);
   let node = (aclass, E.Class) in
   let node' = (normalize aclass, E.Class) in
   Common.memoized _hmemo_class_exits aclass (fun () ->
@@ -521,12 +521,12 @@ let lookup_inheritance g (R aclass, amethod_or_field_or_constant) tokopt =
         children
         |> Common.find_some_opt (fun (s2, kind) ->
                if
-                 full_name =$= s2
+                 full_name = s2
                  (* todo? pass a is_static extra param to lookup?
                   * also should intercept __get for fields?
                   *)
-                 || s2 =$= fst current ^ ".__call"
-                 || s2 =$= fst current ^ ".__callStatic"
+                 || s2 = fst current ^ ".__call"
+                 || s2 = fst current ^ ".__callStatic"
                then Some ((R s2, tokopt), kind)
                else None)
       in
@@ -597,7 +597,7 @@ let add_use_edge_lookup2 xhp env (name, ident) kind =
    * an inheritance? People using G.pred or G.succ must take care to
    * filter classes.
    *)
-  if afld =$= "__construct" then add_use_edge_bis env (name, E.Class)
+  if afld = "__construct" then add_use_edge_bis env (name, E.Class)
 [@@profiling]
 
 (* TODO: diff with add_use_edge_lookup ?? *)

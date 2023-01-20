@@ -302,7 +302,7 @@ let test_layering graph_file =
   pr2 (spf "computed numbering = %d" (Hashtbl.length htopdown));
   let xs = htopdown |> Common.hash_to_list |> List.map snd in
   let min = Common2.minimum xs in
-  assert(min = 0);
+  assert(min =|= 0);
   let max = Common2.maximum xs in
   pr2 (spf "max = %d" max);
   

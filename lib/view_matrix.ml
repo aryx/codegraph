@@ -152,7 +152,7 @@ let draw_cells cr w ~interactive_regions =
       Common.push (Cell (i, j), rect) interactive_regions;
       
       (* less: could also display intra dependencies *)
-      if i = j then
+      if i =|= j then
         CairoH.fill_rectangle ~cr ~color:"wheat" rect
       else begin
         (* old: this is now done in draw_left_rows
@@ -455,7 +455,7 @@ let draw_matrix cr w =
     fst n = "PB"
   ) in
   let nodes_dots = w.m.DM.i_to_name |> Array.to_list |> List.filter (fun n ->
-    snd n = E.MultiDirs
+    snd n =*= E.MultiDirs
   ) in
   let score_up   = DM.score_upper_triangle w.m [] in
   let score_down = DM.score_downer_triangle w.m [] in
@@ -464,7 +464,7 @@ let draw_matrix cr w =
     DM.score_upper_triangle_nodes w.m 
     |> Common.sort_by_val_highfirst
     |> Common.take_safe 4
-    |> Common.exclude (fun (_i, n) -> n = 0)
+    |> Common.exclude (fun (_i, n) -> n =|= 0)
   in
   let nodes_major = biggest_offenders |> List.map fst in
   highlight_biggest_offenders cr w nodes_major;
@@ -472,7 +472,7 @@ let draw_matrix cr w =
     DM.score_upper_triangle_cells w.m
      |> Common.sort_by_val_highfirst
      |> Common.take_safe 20
-     |> Common.exclude (fun (_i, n) -> n = 0)
+     |> Common.exclude (fun (_i, n) -> n =|= 0)
   in
   highlight_biggest_offenders_cells cr w (biggest_cells |> List.map fst);
     
@@ -593,7 +593,7 @@ let button_action _da w ev =
 
             | `BUTTON_PRESS, 3 ->
                 pr2 (spf "right clicking on cell (%d, %d)" i j);
-                if i = j
+                if i =|= j
                 then begin
                   let node = w.m.DM.i_to_name.(j) in
                   w.path <- add_path (DM.Focus (node, DM.DepsInOut)) w.path;

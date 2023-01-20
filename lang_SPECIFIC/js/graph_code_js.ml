@@ -191,7 +191,7 @@ let kind_of_expr_opt v_kind eopt =
       (* without types, this might be wrong; a constant might
        * actually refer to a function, and a global to an object
       *)
-      if fst v_kind = Const
+      if fst v_kind =*= Const
       then E.Constant
       else E.Global
 
@@ -208,7 +208,7 @@ let add_node_and_edge_if_defs_mode env (name, kind) =
   in
   let node = (str', kind) in
 
-  if env.phase = Defs then begin
+  if env.phase =*= Defs then begin
     match () with
     (* if parent is a dupe, then don't want to attach yourself to the
      * original parent, mark this child as a dupe too.
@@ -291,7 +291,7 @@ let add_use_edge_candidates env (name, kind) (*scope*) =
 (*****************************************************************************)
 
 let rec extract_defs_uses env ast =
-  if env.phase = Defs then begin
+  if env.phase =*= Defs then begin
     let dir = Common2.dirname env.file_readable in
     G.create_intermediate_directories_if_not_present env.g dir;
     let node = (env.file_readable, E.File) in
@@ -346,7 +346,7 @@ and module_directive env x =
   match x with
   | Import (_, names, (file, tok)) ->
       List.iter (fun (name1, name2opt) ->
-        if env.phase = Uses then begin
+        if env.phase =*= Uses then begin
           let str1 = s_of_n name1 in
           let str2_opt = Option.map s_of_n name2opt in
           let path_opt = Module_path_js.resolve_path
@@ -368,7 +368,7 @@ and module_directive env x =
       ) names
   | Export (_t, name)
   | ReExportNamespace (_t, _, Some name, _, _) ->
-      if env.phase = Defs then begin
+      if env.phase =*= Defs then begin
         let exports =
           try
             Hashtbl.find env.exports env.file_readable
@@ -391,7 +391,7 @@ and toplevels env xs = List.iter (toplevel env) xs
 and name_expr env name v_kind eopt (*v_resolved*) =
   let kind = kind_of_expr_opt v_kind eopt in
   let env = add_node_and_edge_if_defs_mode env (name, kind) in
-  if env.phase = Uses
+  if env.phase =*= Uses
   then begin
     option (expr env) eopt;
     let (qualified, _kind) = env.current in

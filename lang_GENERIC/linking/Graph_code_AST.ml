@@ -98,7 +98,7 @@ let default_hooks : hooks =
 (* see Graph_code_AST_visitor *)
 
 let extract_defs_uses env ast =
-  (if env.phase = Defs then
+  (if env.phase =*= Defs then
    match env.current_parent with
    | base, E.File ->
        let dir = Common2.dirname env.readable in

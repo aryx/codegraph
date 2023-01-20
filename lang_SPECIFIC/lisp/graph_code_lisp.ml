@@ -74,7 +74,7 @@ let parse file =
 (* dupe: graph_code_c *)
 let find_existing_node env s candidates last_resort =
   candidates
-  |> Common.find_opt (fun kind -> G.has_node (s, kind) env.g)
+  |> List.find_opt (fun kind -> G.has_node (s, kind) env.g)
   ||| last_resort
 
 let _error s tok = failwith (spf "%s: %s" (Parse_info.string_of_info tok) s)
@@ -85,7 +85,7 @@ let _error s tok = failwith (spf "%s: %s" (Parse_info.string_of_info tok) s)
 
 let add_node_and_edge_if_defs_mode env (s, kind) tok =
   let node = (s, kind) in
-  if env.phase = Defs then (
+  if env.phase =*= Defs then (
     if G.has_node node env.g then (
       env.pr2_and_log (spf "DUPE entity: %s" (G.string_of_node node));
       let nodeinfo = G.nodeinfo node env.g in
@@ -123,7 +123,7 @@ let add_use_edge env (s, kind) tok =
 (*****************************************************************************)
 
 let rec extract_defs_uses env ast =
-  if env.phase = Defs then (
+  if env.phase =*= Defs then (
     let dir = Common2.dirname env.readable_file in
     G.create_intermediate_directories_if_not_present env.g dir;
     let node = (env.readable_file, E.File) in
@@ -166,12 +166,12 @@ and sexp_bis env x =
       ( _,
         [ Atom (Id ("require", _)); Special ((Quote, _), Atom (Id (s, t))) ],
         _ ) ->
-      if env.phase = Uses then
+      if env.phase =*= Uses then
         let node = (s, E.Module) in
         add_use_edge env node t
   | Sexp (_, Atom (Id (s, t)) :: xs, _) ->
       if
-        env.phase = Uses
+        env.phase =*= Uses
         && (G.has_node (s, E.Macro) env.g || G.has_node (s, E.Function) env.g)
       then (
         let kind =

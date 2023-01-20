@@ -34,11 +34,11 @@ let wrap_stat env categ opt =
 (*****************************************************************************)
 (* Defs/Uses control *)
 (*****************************************************************************)
-let when_defs_phase env f = if env.phase = Defs then f () else ()
+let when_defs_phase env f = if env.phase =*= Defs then f () else ()
 
-let when_uses_phase env f = if env.phase = Uses then f () else ()
+let when_uses_phase env f = if env.phase =*= Uses then f () else ()
 
-let when_uses_phase_or_none env f = if env.phase = Uses then f () else None
+let when_uses_phase_or_none env f = if env.phase =*= Uses then f () else None
 
 (*****************************************************************************)
 (* Name helpers *)
@@ -96,7 +96,7 @@ let entity_kind_of_definition _env (ent, defkind) =
 (*****************************************************************************)
 
 let type_of_module_opt env entname =
-  if env.lang = Python then
+  if env.lang =*= Python then
     (* This is to allow to treat Python modules like classes
      * where you can do mod.function like for a field access.
      * The type of the module is then simply its name,

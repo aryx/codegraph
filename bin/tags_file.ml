@@ -177,7 +177,7 @@ let add_method_tags_when_unambiguous files_and_defs =
                           (not (Hashtbl.mem h_toplevel_names methodname))
                           && List.length
                                (Hashtbl.find h_grouped_methods methodname)
-                             = 1
+                             =|= 1
                         then [ t; { t with tagname = methodname } ]
                         else [ t ]
                       else

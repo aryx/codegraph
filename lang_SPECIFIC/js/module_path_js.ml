@@ -97,7 +97,7 @@ let resolve_path ~root ~pwd str =
 
         let candidates = [ file; spf "%s.js" file ] in
         candidates
-        |> Common.find_opt (fun path ->
+        |> List.find_opt (fun path ->
                Sys.file_exists path && not (Sys.is_directory path))
       with
       | Not_found ->
