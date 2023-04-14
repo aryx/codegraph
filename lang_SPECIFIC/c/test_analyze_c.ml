@@ -7,7 +7,7 @@ open Common
 (*****************************************************************************)
 
 let test_dump_cil file =
-  let _ast = Parse_c.parse_program file in
+  let _ast = Parse_c.parse_program (Fpath.v file) in
 
   (*
   let env =

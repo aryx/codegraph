@@ -38,8 +38,9 @@ let skip_file dir =
 
 let files_of_dir_or_files ~lang xs =
   let finder = finder lang in
-  let xs = List.map Common.fullpath xs in
+  let xs = List.map Common.fullpath xs |> File.Path.of_strings in
   finder xs |> Skip_code.filter_files_if_skip_list ~root:xs |> fst
+  |> File.Path.to_strings
 
 
 (* todo: factorize with filter_files_if_skip_list?
@@ -47,17 +48,18 @@ let files_of_dir_or_files ~lang xs =
 *)
 let files_of_root ~lang root =
   let finder = finder lang in
-  let files = finder [root] in
+  let files = finder [Fpath.v root] in
 
   let skip_list =
     if Sys.file_exists (skip_file root)
     then begin
       logger#info "Using skip file: %s (for lang = %s)" (skip_file root) lang;
-      Skip_code.load (skip_file root);
+      Skip_code.load (Fpath.v (skip_file root));
     end
     else []
   in
-  Skip_code.filter_files skip_list ~root files |> fst
+  Skip_code.filter_files skip_list ~root:(Fpath.v root) files |> fst
+  |> File.Path.to_strings
 
 (*
   let root = Common.realpath dir in

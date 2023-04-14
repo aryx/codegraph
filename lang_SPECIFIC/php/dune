@@ -4,9 +4,9 @@
  (libraries
 
    commons profiling process_limits
-   pfff-h_program-lang
+   lib_parsing
    graph_code
    parser_php.ast parser_php.menhir
  )
- (preprocess (pps ppx_deriving.show ppx_profiling))
+ (preprocess (pps ppx_deriving.show profiling.ppx))
 )

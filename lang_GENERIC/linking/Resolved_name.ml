@@ -63,14 +63,14 @@ let last_ident xs =
   | x :: _ -> x
 
 let of_ast_name = function
-  | AST.Id ((s, _tok), v2) -> (
+  | AST.Id ((s, tok), v2) -> (
       match !(v2.id_resolved) with
       | Some (AST.ImportedEntity xs, _sid)
-      | Some (AST.ImportedModule (AST.DottedName xs), _sid)
+      | Some (AST.ImportedModule (xs), _sid)
       (* This can actually introduces some regressions, take care! *)
-      | Some (AST.ResolvedName (xs, []), _sid)
+      | Some (AST.GlobalName (xs, []), _sid)
       ->
-          Some xs
+          Some (xs |> Common.map (fun x -> x, tok))
       | Some _ -> 
             logger#info "of_ast_name: %s, no resolvable name (Some _)" s; 
             None
@@ -94,10 +94,10 @@ let to_ast_name (xs : AST.dotted_ident) : AST.name =
 (*****************************************************************************)
 
 (* To use when Naming_AST.ml was not able to resolve *)
-let set_resolved_if_none name dotted_ident =
+let set_resolved_if_none name xs =
   match name with
   | AST.Id (_v1, v2) -> (
         match !(v2.id_resolved) with
-        | None -> v2.id_resolved := (Some (ResolvedName (dotted_ident, []), AST.SId.unsafe_default)) ;
+        | None -> v2.id_resolved := (Some (GlobalName (xs, []), AST.SId.unsafe_default)) ;
         | _ -> ())
   | _ -> ()

@@ -98,7 +98,7 @@ let lookup_name_and_set_resolved_if_needed (env: env) (name: AST.name) : G.node 
             (match lookup_resolved_name env rn with
             (* good it exists! *)
             | Some n ->
-                N.set_resolved_if_none name rn;
+                N.set_resolved_if_none name (List.map fst rn);
                 Some n
             | None -> None
             (* TODO? ImportedModule Filename => lookup E.File *)

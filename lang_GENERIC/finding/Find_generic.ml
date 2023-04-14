@@ -28,10 +28,10 @@
 
 let files_of_root lang root =
   let files = 
-    Common.files_of_dir_or_files_no_vcs_nofilter [root] in
+    Common.files_of_dir_or_files_no_vcs_nofilter [root] |> File.Path.of_strings in
   let files, _skipped = 
-    Skip_code.filter_files_if_skip_list ~root:[root] files in
-  files |> List.filter (fun file ->
-      let langs = Lang.langs_of_filename file in
+    Skip_code.filter_files_if_skip_list ~root:[Fpath.v root] files in
+  files |> File.Path.to_strings |> List.filter (fun file ->
+      let langs = Lang.langs_of_filename (Fpath.v file) in
       List.mem lang langs
   )

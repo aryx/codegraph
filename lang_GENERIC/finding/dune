@@ -7,13 +7,13 @@
  (wrapped false)
  (libraries
    commons
-   pfff-h_program-lang
+   lib_parsing
    semgrep.core ; for Lang.ml, could move out of semgrep
 
  )
  (preprocess
     (pps
-      ppx_profiling
+      profiling.ppx
       ppx_deriving.show
     )
  )

@@ -13,4 +13,4 @@ val files_of_dir_or_files:
   Common.path list -> Common.filename list
 
 
-val finder: string -> (Common.path list -> Common.filename list)
+val finder: string -> (Fpath.t list -> Fpath.t list)

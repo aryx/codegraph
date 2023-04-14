@@ -116,7 +116,7 @@ let main_action xs =
         Parse_cpp.init_defs !Flag_parsing_cpp.macros_h;
         let local = Filename.concat root "pfff_macros.h" in
         if Sys.file_exists local
-        then Parse_cpp.add_defs local;
+        then Parse_cpp.add_defs (Fpath.v local);
         Graph_code_c.build ~verbose:!verbose root files, empty
     | "java_old" -> 
         let files = Find_source.files_of_root ~lang:"java" root in
@@ -127,12 +127,13 @@ let main_action xs =
       let skip_file = Filename.concat root "skip_list.txt" in
       let skip_list =
         if Sys.file_exists skip_file
-        then Skip_code.load skip_file
+        then Skip_code.load (Fpath.v skip_file)
         else []
       in
       let is_skip_error_file = Skip_code.build_filter_errors_file skip_list in
       Graph_code_php.build 
-        ~verbose:!verbose ~is_skip_error_file 
+        ~verbose:!verbose ~is_skip_error_file:(fun file ->
+                  is_skip_error_file (Fpath.v file))
         ~class_analysis:!class_analysis
         root files
     | "js_old" -> 

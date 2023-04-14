@@ -9,7 +9,7 @@
     compiler-libs.common
 
     commons profiling
-    pfff-h_program-lang
+    lib_parsing
     graph_code
 
     ; now in codemap
@@ -62,7 +62,7 @@
  ; for ocamldebug
  (modes native byte)
 
- (preprocess (pps ppx_deriving.show ppx_profiling))
+ (preprocess (pps ppx_deriving.show profiling.ppx))
 )
 
 

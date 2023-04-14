@@ -145,7 +145,7 @@ let parse ~show_parse_error file =
         Common.save_excursion Flag.show_parsing_error show_parse_error
           (fun () ->
             Common.save_excursion Flag.verbose_parsing show_parse_error
-              (fun () -> Parse_c.parse_program file)))
+              (fun () -> Parse_c.parse_program (Fpath.v file))))
   with
   | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
   | exn ->

@@ -1170,13 +1170,14 @@ and map_function_definition env
 
 and map_function_kind env _ = ()
 
-and map_parameters env v = map_of_list (map_parameter env) v
+and map_parameters env v = 
+  map_bracket env (map_of_list (map_parameter env)) v
 
 and map_parameter env = function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | Param v1 ->
+  | Param v1 | ParamReceiver v1 ->
       let v1 = map_parameter_classic env v1 in
       nothing env v1
   | ParamPattern v1 ->
@@ -1285,6 +1286,9 @@ and map_or_type_element env = function
   | OrUnion (v1, v2) ->
       let v1 = map_ident env v1 and v2 = map_type_ env v2 in
       nothing env (v1, v2)
+  | OrEllipsis v1 ->
+      let v1 = map_tok env v1 in
+      nothing env v1
 
 (* ------------------------------------------------------------------------- *)
 (* Object/struct/record/class field definition *)
@@ -1446,6 +1450,8 @@ and map_partial env partial =
   raise (SemgrepConstruct (V.first_info_of_any (Partial partial)))
 
 and map_any env = function
+  (* TODO *)
+  | XmlAt _ | Raw _ -> nothing env ()
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
@@ -1492,7 +1498,7 @@ and map_any env = function
       let v1 = map_ident env v1 in
       nothing env v1
   | Str v1 ->
-      let v1 = map_wrap env map_of_string v1 in
+      let v1 = map_bracket env (map_wrap env map_of_string) v1 in
       nothing env v1
   | Def v1 ->
       let v1 = map_definition env v1 in

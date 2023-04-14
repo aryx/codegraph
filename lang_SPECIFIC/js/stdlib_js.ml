@@ -61,7 +61,7 @@ let extract_defs file =
   let toks =
     (* Flow/Typescript and JSX have lexing conflicts *)
     Common.save_excursion Flag_parsing_js.jsx false (fun () ->
-        Parse_js.tokens file)
+        Parse_js.tokens (Parsing_helpers.file file))
   in
   let toks = Common.exclude TH.is_comment toks in
   let trees =

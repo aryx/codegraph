@@ -5,9 +5,9 @@
  (libraries
 
    commons profiling
-   pfff-h_program-lang
+   lib_parsing
    graph_code
    parser_ocaml.ast parser_ocaml.menhir
  )
- (preprocess (pps ppx_deriving.show ppx_profiling))
+ (preprocess (pps ppx_deriving.show profiling.ppx))
 )

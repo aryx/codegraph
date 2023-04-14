@@ -8,7 +8,7 @@
  (wrapped false)
  (libraries
    commons
-   pfff-h_program-lang
+   lib_parsing
 
    ast_generic
    parser_python.menhir parser_python.ast_generic
@@ -20,7 +20,7 @@
  )
  (preprocess
     (pps
-      ppx_profiling
+      profiling.ppx
       ppx_deriving.show
     )
  )

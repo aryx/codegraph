@@ -6,5 +6,5 @@
 
    commons profiling
  )
-(preprocess (pps ppx_deriving.show ppx_profiling))
+(preprocess (pps ppx_deriving.show profiling.ppx))
 )
