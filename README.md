@@ -16,3 +16,6 @@ $ ./codegraph ~/pfff
 This should launch a gtk-based GUI that allows you to visualize
 source code dependencies.
 
+See the old page of codegraph at Facebook here:
+https://github.com/facebookarchive/pfff/wiki/CodeGraph
+for more information.
