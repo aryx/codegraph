@@ -3,6 +3,7 @@
  * appearing just here.
  *)
 open Common
+open Fpath_.Operators
 
 module E = Entity_code
 module GC = Graph_code
@@ -10,8 +11,6 @@ module GC2 = Graph_code_opti
 module DM = Dependencies_matrix_code
 module DMBuild = Dependencies_matrix_build
 module J = JSON
-
-let logger = Logging.get_logger [__MODULE__]
 
 (*****************************************************************************)
 (* Purpose *)
@@ -51,7 +50,7 @@ let action = ref ""
 (*****************************************************************************)
 
 let dep_file_of_dir dir = 
-  Filename.concat dir Graph_code.default_filename
+  Filename.concat dir !!Graph_code.default_filename
 
 let set_gc () =
   (* only relevant in bytecode, in native the stacklimit is the os stacklimit*)
@@ -66,7 +65,7 @@ let set_gc () =
 (*****************************************************************************)
 (* Building stdlib *)
 (*****************************************************************************)
-let build_stdlib lang root dst =
+let build_stdlib lang (root : Fpath.t) dst =
   let files = Find_source.files_of_root ~lang root in
   match lang with
   | "java" ->
@@ -81,16 +80,15 @@ let build_stdlib lang root dst =
 
 let main_action xs =
 
-  let xs = List.map Common.fullpath xs in
-
   (* codegraph_build was more flexible in allowing to pass
    * multiple dirs, but this can be done with a skip_list anyway.
    * old: let root = Common2.common_prefix_of_files_or_dirs xs in
    *      root, find_source__files_of_dir_or_files ~lang xs
    *)
-  let root = 
+  let root : Fpath.t = 
     match xs with
-    | [root] -> root
+      (* let's get to realpath ASAP so get to a simpler world *)
+    | [root] -> Rpath.of_string_exn root |> Rpath.to_fpath
     | _ -> failwith "too many arguments, we just need one root directory"
   in
 
@@ -101,8 +99,8 @@ let main_action xs =
     | Some lang -> 
          let files = Find_generic.files_of_root lang root in
          let xs = files |> List.map (fun file ->
-            logger#info "parsing %s" file;
-            file, Parse_generic.parse_and_resolve_name lang file) in
+            Logs.info (fun m -> m "parsing %s" file);
+            file, Parse_generic.parse_and_resolve_name lang (Fpath.v file)) in
          let hooks = Graph_code_AST.default_hooks in
          let (g, _statsTODO) = Graph_code_AST.build ~root ~hooks lang xs in
          g, empty
@@ -112,28 +110,34 @@ let main_action xs =
         let files = Find_source.files_of_root ~lang:"ml" root in
         Graph_code_ml.build ~verbose:!verbose root files, empty
     | "c_old" -> 
-        let files = Find_source.files_of_root ~lang:"c" root in
+        let _files = Find_source.files_of_root ~lang:"c" root in
         Parse_cpp.init_defs !Flag_parsing_cpp.macros_h;
-        let local = Filename.concat root "pfff_macros.h" in
+        let local = Filename.concat !!root "pfff_macros.h" in
         if Sys.file_exists local
         then Parse_cpp.add_defs (Fpath.v local);
+        failwith "TODO: Graph_code_c.build"
+(*
         Graph_code_c.build ~verbose:!verbose root files, empty
+*)
     | "java_old" -> 
         let files = Find_source.files_of_root ~lang:"java" root in
         Graph_code_java.build ~verbose:!verbose root files, empty
     | "php_old" -> 
         let files = Find_source.files_of_root ~lang:"php" root in
+(* TODO delete
       (* todo: better factorize *)
-      let skip_file = Filename.concat root "skip_list.txt" in
+      let skip_file = Filename.concat !!root "skip_list.txt" in
       let skip_list =
         if Sys.file_exists skip_file
         then Skip_code.load (Fpath.v skip_file)
         else []
       in
       let is_skip_error_file = Skip_code.build_filter_errors_file skip_list in
+*)
+      
       Graph_code_php.build 
-        ~verbose:!verbose ~is_skip_error_file:(fun file ->
-                  is_skip_error_file (Fpath.v file))
+        ~verbose:!verbose ~is_skip_error_file:(fun _file -> false
+                  (* is_skip_error_file (Fpath.v file)*) )
         ~class_analysis:!class_analysis
         root files
     | "js_old" -> 
@@ -142,29 +146,32 @@ let main_action xs =
 
     | "lisp" -> 
         let files = Find_source.files_of_root ~lang:"lisp" root in
-        Graph_code_lisp.build ~verbose:!verbose root files, empty
+        Graph_code_lisp.build root files, empty
     | "dot" -> 
-         Graph_code.graph_of_dotfile (Filename.concat root "graph.dot"), empty
+         Graph_code.graph_of_dotfile (root / "graph.dot"), empty
 
 (*#if FEATURE_CMT*)
     | "cmt"  -> 
-          let ml_files = Find_source.files_of_root ~lang:"ml" root in
-          let cmt_files = Find_source.files_of_root ~lang:"cmt" root in
+          let _ml_files = Find_source.files_of_root ~lang:"ml" root in
+          let _cmt_files = Find_source.files_of_root ~lang:"cmt" root in
+          failwith "TODO: cmt"
+(*
           Graph_code_cmt.build ~root ~cmt_files ~ml_files, 
           empty
+*)
 (*#endif*)
 
     | _ -> failwith ("language not supported: " ^ !lang_str)
     ))
     with (Graph_code.Error err) as exn ->
-      pr2 (Graph_code.string_of_error err);
+      UCommon.pr2 (Graph_code.string_of_error err);
       raise exn
   in
-  let output_dir = !output_dir ||| root in
+  let output_dir = !output_dir ||| !!root in
   let file = dep_file_of_dir output_dir in
-  Graph_code.print_statistics stats g;
-  logger#info "Saving codegraph file in %s" file;
-  Graph_code.save g file;
+  Logs.info (fun m -> m "%s" (Graph_code.string_of_statistics stats g));
+  Logs.info (fun m -> m "Saving codegraph file in %s" file);
+  Graph_code.save g (Fpath.v file);
 
   (* Save also TAGS, light db, prolog (TODO), layers. We could also do
    * that on demand when we run codemap and there is only a 
@@ -193,9 +200,9 @@ let main_action xs =
 
 (* Analysis *)
 let analyze_backward_deps graph_file =
-  let g = GC.load graph_file in
+  let g = GC.load (Fpath.v graph_file) in
   let gopti = 
-    Common.cache_computation graph_file ".opti"
+    Cache_disk.cache_computation graph_file ".opti"
       (fun () -> Graph_code_opti.convert g)
   in
   let config = DM.basic_config_opti gopti in
@@ -210,43 +217,43 @@ let analyze_backward_deps graph_file =
       let n = dm.DM.matrix.(i).(j) in
       if n > 0 then begin
         let xs = DM.explain_cell_list_use_edges (i, j) dm gopti in
-        pr2 (spf " (%d, %d) = %d" i j (List.length xs));
-        Common.push xs res;
+        UCommon.pr2 (spf " (%d, %d) = %d" i j (List.length xs));
+        Stack_.push xs res;
       end
     done
   done;
   let edges = List.flatten !res in
-  pr2 (spf "total backward deps = %d" (List.length edges));
-  let xxs = Common.group_by_mapped_key (fun (_n1, n2) -> n2) edges in
-  pr2 (spf "#dst =%d" (List.length xxs));
+  UCommon.pr2 (spf "total backward deps = %d" (List.length edges));
+  let xxs = Assoc.group_by_mapped_key (fun (_n1, n2) -> n2) edges in
+  UCommon.pr2 (spf "#dst =%d" (List.length xxs));
   xxs |> List.map (fun (n, xs) -> (n, xs), List.length xs)
-    |> Common.sort_by_val_highfirst
-    |> Common.take_safe 100
+    |> Assoc.sort_by_val_highfirst
+    |> List_.take_safe 100
     |> List.iter (fun ((n, _xs), cnt) ->
         let file = GC.file_of_node n g in
-         pr2 (spf "%-30s = %d (file = %s)" (GC.string_of_node n) cnt
-                file)
+         UCommon.pr2 (spf "%-30s = %d (file = %s)" (GC.string_of_node n) cnt
+                !!file)
     );
   let file = graph_file ^ ".whitelist" in
-  pr2 (spf "generating whitelist in %s" file);
-  GC.save_whitelist edges file g;
-    ()
+  UCommon.pr2 (spf "generating whitelist in %s" file);
+  Graph_code_adjust.save_whitelist edges (Fpath.v file) g;
+  ()
 
 
 (* Graph adjuster (overlay-ish) *)
 let adjust_graph graph_file adjust_file whitelist_file dest_file =
-  let g = Graph_code.load graph_file in
-  let adjust = Graph_code.load_adjust adjust_file in
-  let whitelist = Graph_code.load_whitelist whitelist_file in
-  Graph_code.adjust_graph g adjust whitelist;
-  Graph_code.save g dest_file;
+  let g = Graph_code.load (Fpath.v graph_file) in
+  let adjust = Graph_code_adjust.load_adjust (Fpath.v adjust_file) in
+  let whitelist = Graph_code_adjust.load_whitelist (Fpath.v whitelist_file) in
+  Graph_code_adjust.adjust_graph g adjust whitelist;
+  Graph_code.save g (Fpath.v dest_file);
   ()
 
 (* quite similar to analyze_backward_deps *)
 let test_thrift_alive graph_file =
-  let g = GC.load graph_file in
+  let g = GC.load (Fpath.v graph_file) in
   let gopti = 
-    Common.cache_computation graph_file ".opti"
+    Cache_disk.cache_computation graph_file ".opti"
       (fun () -> Graph_code_opti.convert g)
   in
   let config = DM.basic_config_opti gopti in
@@ -264,16 +271,16 @@ let test_thrift_alive graph_file =
     then begin
       let v = dm.DM.matrix.(kflib).(j) in
       if v > 0 then begin
-        pr2 (spf "%s is USED in flib/" s);
+        UCommon.pr2 (spf "%s is USED in flib/" s);
         let xs = DM.explain_cell_list_use_edges (kflib, j) dm gopti in
-        xs |> Common.take_safe 5 |> List.iter (fun (n1, n2) ->
-          pr2 (spf "    %s --> %s" 
+        xs |> List_.take_safe 5 |> List.iter (fun (n1, n2) ->
+          UCommon.pr2 (spf "    %s --> %s" 
                  (GC.string_of_node n1) (GC.string_of_node n2))
         )
       end else begin
         if DM.is_dead_column j dm
         then begin
-          pr2 (spf "%s appeared DEAD" s);
+          UCommon.pr2 (spf "%s appeared DEAD" s);
         end
       end
     end
@@ -281,65 +288,68 @@ let test_thrift_alive graph_file =
 
 (* quite similar to analyze_backward_deps *)
 let test_adhoc_deps graph_file =
-  let g = GC.load graph_file in
+  let g = GC.load (Fpath.v graph_file) in
   g |> GC.iter_use_edges (fun n1 n2 ->
-    let file = GC.file_of_node n2 g in
+    let file = !!(GC.file_of_node n2 g) in
     if file =~ ".*flib/intern/thrift/lib"
     then begin
-      let file2 = GC.file_of_node n1 g in
+      let file2 = !!(GC.file_of_node n1 g) in
       if file2 =~ ".*tests/" || file2 =~ ".*/__tests__/.*"
       then begin
-        pr2_once (spf "%s --> %s" file2 file);
+        UCommon.pr2_once (spf "%s --> %s" file2 file);
         (*pr2 (spf " %s --> %s" (GC.string_of_node n1) (GC.string_of_node n2));*)
       end
     end
   )
 
 let test_layering graph_file =
-  let g = GC.load graph_file in
+  let g = GC.load (Fpath.v graph_file) in
   let (scc, _hscc) = GC.strongly_connected_components_use_graph g in
-  pr2 (spf "#scc = %d" (Array.length scc));
+  UCommon.pr2 (spf "#scc = %d" (Array.length scc));
   let htopdown = GC.bottom_up_numbering g in
-  pr2 (spf "computed numbering = %d" (Hashtbl.length htopdown));
-  let xs = htopdown |> Common.hash_to_list |> List.map snd in
+  UCommon.pr2 (spf "computed numbering = %d" (Hashtbl.length htopdown));
+  let xs = htopdown |> Hashtbl_.hash_to_list |> List.map snd in
   let min = Common2.minimum xs in
   assert(min =|= 0);
   let max = Common2.maximum xs in
-  pr2 (spf "max = %d" max);
+  UCommon.pr2 (spf "max = %d" max);
   
   let file = "/tmp/rank_code.txt" in
-  pr2 (spf "ranks in %s" file);
-  Common.with_open_outfile file (fun (pr, _chan) ->
+  UCommon.pr2 (spf "ranks in %s" file);
+  UFile.Legacy.with_open_outfile file (fun (pr, _chan) ->
     let pr s = pr (s ^ "\n") in
-    htopdown |> Common.hash_to_list |> Common.sort_by_val_lowfirst
+    htopdown |> Hashtbl_.hash_to_list |> Assoc.sort_by_val_lowfirst
     |> List.iter (fun (node, v) -> 
       pr (spf "%s: %d" (GC.string_of_node node) v)
     )
   );
 
-  let (d,_,_) = Common2.dbe_of_filename graph_file in
-  let output = Common2.filename_of_dbe (d, "layer_graph_code", "json") in
+  let (d,_,_) = Filename_.dbe_of_filename graph_file in
+  let output = Filename_.filename_of_dbe (d, "layer_graph_code", "json") in
   Layer_graph_code.gen_rank_heatmap_layer g htopdown output;
   ()
 
 
 let test_xta graph_file = 
-  let g = Graph_code.load graph_file in
+  let g = Graph_code.load (Fpath.v graph_file) in
   let dag = Graph_code_class_analysis.class_hierarchy g in
   let hdepth = Graphe.depth_nodes dag in
   hdepth |> Hashtbl.iter (fun k v ->
-    pr2 (spf "%s = %d" (Graph_code.string_of_node k) v);
+    UCommon.pr2 (spf "%s = %d" (Graph_code.string_of_node k) v);
   );
   let dag = Graph_code_class_analysis.class_hierarchy g in
   let htoplevels = Graph_code_class_analysis.toplevel_methods g dag in
-  htoplevels |> Common2.hkeys |> List.iter (fun k ->
-      let xs = Hashtbl.find_all htoplevels k in
-      pr2 (spf "%s -> %d (e.g. %s)" 
+  htoplevels |> Common2_.hkeys |> List.iter (fun k ->
+      let xs = Hashtbl_.get_stack htoplevels k in
+      UCommon.pr2 (spf "%s -> %d (e.g. %s)" 
                k (List.length xs) (Graph_code.string_of_node (List.hd xs)));
   );
   ()
 
-let test_dotfile_of_deps dir =
+let test_dotfile_of_deps _dir =
+  failwith "TODO: test_dotfile_of_deps and cmd_to_list"
+(*
+
   let deps = Common.cmd_to_list (spf "find %s -name \"*.deps\" " dir) in
   deps |> List.iter (fun file ->
     let (_d,lib,e) = Common2.dbe_of_filename file in
@@ -350,6 +360,7 @@ let test_dotfile_of_deps dir =
       )
     end
   )  
+*)
 
 (* This is actually not great because the .depend contains the dependencies
  * for the .o and so it does not contain inter .h dependencies.
@@ -365,22 +376,22 @@ let test_dotfile_of_dotdepend file =
       else x::(remove_antislash (y::xs))
     | [x] -> [x]
   in
-  let lines = Common.cat file in
+  let lines = UFile.Legacy.cat file in
   let lines = remove_antislash lines in
   (* lines |> List.iter pr2_gen *)
   lines |> List.iter (fun line ->
     match () with
     | _ when line =~ ".*\\.o: \\([^ ]+\\)\\.cpp\\(.*\\)$" ->
       let (src, deps_str) = Common.matched2 line in
-      let deps = Common.split "[ \t]+" deps_str in
+      let deps = String_.split ~sep:"[ \t]+" deps_str in
       deps |> List.iter (fun dep ->
-        pr (spf "\"%s.cpp\" -> \"%s\""  src dep)
+        UCommon.pr (spf "\"%s.cpp\" -> \"%s\""  src dep)
       )
     | _ when line =~ ".*\\.o: \\([^ ]+\\)\\.h\\(.*\\)$" ->
       let (src, deps_str) = Common.matched2 line in
-      let deps = Common.split "[ \t]+" deps_str in
+      let deps = String_.split ~sep:"[ \t]+" deps_str in
       deps |> List.iter (fun dep ->
-        pr (spf "\"%s.cpp\" -> \"%s\""  src dep)
+        UCommon.pr (spf "\"%s.cpp\" -> \"%s\""  src dep)
       )
 
     | _ -> failwith (spf "wront line format in .depend: %s" line)
@@ -391,43 +402,43 @@ let test_dotfile_of_dotdepend file =
 let extra_actions () = [
 
   "-to_json", " <graph file>", 
-  Arg_helpers.mk_action_1_arg (fun file ->
-    let g = Graph_code.load file in
+  Arg_.mk_action_1_arg (fun file ->
+    let g = Graph_code.load (Fpath.v file) in
     let json = Graph_code_export.graph_to_json g in
     let dst = "graph_code.json" in
-    pr2 (spf "saving graph in JSON format in %s" dst);
+    UCommon.pr2 (spf "saving graph in JSON format in %s" dst);
     J.string_of_json ~compact:false ~recursive:false ~allow_nan:true json
-     |> Common.write_file ~file:dst
+     |> UFile.Legacy.write_file ~file:dst
   );
 
   "-build_stdlib", " <src> <dst>",
-  Arg_helpers.mk_action_2_arg (fun dir dst -> build_stdlib !lang_str dir dst);
+  Arg_.mk_action_2_arg (fun dir dst -> build_stdlib !lang_str (Fpath.v dir) dst);
   "-adjust_graph", " <graph> <adjust_file> <whitelist> <dstfile>\n",
-  Arg_helpers.mk_action_4_arg (fun graph file file2 dst -> 
+  Arg_.mk_action_4_arg (fun graph file file2 dst -> 
     adjust_graph graph file file2 dst);
 
 
   "-test_backward_deps", " <graph>",
-  Arg_helpers.mk_action_1_arg (fun graph_file -> 
+  Arg_.mk_action_1_arg (fun graph_file -> 
     analyze_backward_deps graph_file
   );
   "-test_protected_to_private", " <graph>",
-  Arg_helpers.mk_action_1_arg (fun graph_file ->
-    let g = Graph_code.load graph_file in
+  Arg_.mk_action_1_arg (fun graph_file ->
+    let g = Graph_code.load (Fpath.v graph_file) in
     Graph_code_class_analysis.protected_to_private_candidates g
   );
   "-test_thrift_alive", " <graph>",
-  Arg_helpers.mk_action_1_arg test_thrift_alive;
+  Arg_.mk_action_1_arg test_thrift_alive;
   "-test_pad", " <graph>",
-  Arg_helpers.mk_action_1_arg test_adhoc_deps;
+  Arg_.mk_action_1_arg test_adhoc_deps;
   "-test_layering", " <graph>",
-  Arg_helpers.mk_action_1_arg test_layering;
+  Arg_.mk_action_1_arg test_layering;
   "-test_xta", " <graph>",
-  Arg_helpers.mk_action_1_arg test_xta;
+  Arg_.mk_action_1_arg test_xta;
   "-test_dotfile_of_deps", " <dir>",
-  Arg_helpers.mk_action_1_arg test_dotfile_of_deps;
+  Arg_.mk_action_1_arg test_dotfile_of_deps;
   "-test_dotfile_of_dotdepend", " <file>",
-  Arg_helpers.mk_action_1_arg test_dotfile_of_dotdepend;
+  Arg_.mk_action_1_arg test_dotfile_of_dotdepend;
 ]
 
 (*****************************************************************************)
@@ -436,7 +447,7 @@ let extra_actions () = [
 
 let all_actions () = 
   extra_actions () @
-  Test_parsing_cmt.actions () @
+(* TODO  Test_parsing_cmt.actions () @ *)
   []
 
 let options () = [
@@ -449,15 +460,15 @@ let options () = [
 
   "-class_analysis", Arg.Set class_analysis, 
   " resolve some method calls";
-
+(* TODO
   "-symlinks", Arg.Unit (fun () -> Common.follow_symlinks := true;), 
   " follow symlinks";
- 
+*) 
   "-no_fake_node", Arg.Clear Graph_code_php.add_fake_node_when_undefined_entity,
   " no fake nodes when use-def mismatches\n";
   ] @
-  Arg_helpers.options_of_actions action (all_actions()) @
-  Common2.cmdline_flags_devel () @
+  Arg_.options_of_actions action (all_actions()) @
+  Common2_.cmdline_flags_devel () @
   [
   "-verbose", Arg.Unit (fun () ->
     verbose := true;
@@ -465,7 +476,7 @@ let options () = [
   ), " ";
 
   "-version",   Arg.Unit (fun () -> 
-    pr2 (spf "CodeGraph build version: %s" "TODO: version");
+    UCommon.pr2 (spf "CodeGraph build version: %s" "TODO: version");
     exit 0;
   ), 
   " guess what";
@@ -483,6 +494,11 @@ let main () =
   in
   set_gc ();
 
+  (* TODO: call setup_logging, use cmdliner and parse --debug, --info ... *)
+  Logs_.setup_basic ();
+  Logs.info (fun m -> m "Starting logging");
+  
+(* OLD TO REMOVE
   let handler = Easy_logging.(Handlers.make (CliErr Debug))
   (*
   match config.log_to_file with
@@ -498,10 +514,10 @@ let main () =
     Logging.load_config_file !log_config_file;
     logger#info "loaded %s" !log_config_file;
   end;
-
+*)
   
   (* does side effect on many global flags *)
-  let args = Arg_helpers.parse_options (options()) usage_msg Sys.argv in
+  let args = Arg_.parse_options (options()) usage_msg Sys.argv in
 
   (* must be done after Arg.parse, because Common.profile is set by it *)
   Profiling.profile_code "Main total" (fun () -> 
@@ -509,10 +525,10 @@ let main () =
     (* --------------------------------------------------------- *)
     (* actions, useful to debug subpart *)
     (* --------------------------------------------------------- *)
-    | xs when List.mem !action (Arg_helpers.action_list (all_actions())) -> 
-        Arg_helpers.do_action !action xs (all_actions())
+    | xs when List.mem !action (Arg_.action_list (all_actions())) -> 
+        Arg_.do_action !action xs (all_actions())
 
-    | _ when not (Common.null_string !action) -> 
+    | _ when not (String_.empty !action) -> 
         failwith ("unrecognized action or wrong params: " ^ !action)
 
     (* --------------------------------------------------------- *)
@@ -525,12 +541,12 @@ let main () =
     (* empty entry *)
     (* --------------------------------------------------------- *)
     | [] -> 
-        Arg_helpers.usage usage_msg (options())
+        Arg_.usage usage_msg (options())
     )
   )
 
 (*****************************************************************************)
 let _ =
-  Common.main_boilerplate (fun () -> 
+  UCommon.main_boilerplate (fun () -> 
     main ();
   )

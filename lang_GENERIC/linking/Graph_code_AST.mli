@@ -17,8 +17,8 @@ val default_hooks : Graph_code_AST_env.hooks
  * generate those ASTs.
  *)
 val build :
-  root:Common.dirname ->
+  root:Fpath.t ->
   hooks:Graph_code_AST_env.hooks ->
   Lang.t ->
-  (Common.filename * AST_generic.program) list ->
+  (Common2_.filename * AST_generic.program) list ->
   Graph_code.t * Stat_code.t

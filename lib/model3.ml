@@ -13,7 +13,7 @@
  * license.txt for more details.
  *)
 (* floats are the norm in graphics *)
-open Common2.ArithFloatInfix
+open Common2_.ArithFloatInfix
 
 module CairoH = Cairo_helpers3
 module DM = Dependencies_matrix_code
@@ -29,7 +29,7 @@ module DMBuild = Dependencies_matrix_build
 
 type model = {
   (* unused for now *)
-  root: Common.dirname;
+  root: Fpath.t;
 
   (* less: this graph may be really huge and may stress the GC
    * during interactions, so for now just use gopti ? I tried
@@ -192,7 +192,7 @@ let layout_of_w w =
 let find_region_at_user_point2 w ~x ~y =
   let regions = w.interactive_regions in
   let pt = { Figures. x = x; y = y } in
-  regions |> Common.find_some_opt (fun (kind, rect) ->
+  regions |> List_.find_some_opt (fun (kind, rect) ->
       if Figures.point_is_in_rectangle pt rect
       then Some kind
       else None

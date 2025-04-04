@@ -13,6 +13,7 @@
  * license.txt for more details.
  *)
 open Common
+open Fpath_.Operators
 open Ast_lisp
 module E = Entity_code
 module G = Graph_code
@@ -41,7 +42,7 @@ type env = {
   g : Graph_code.t;
   phase : phase;
   current : Graph_code.node;
-  readable_file : Common.filename;
+  readable_file : Fpath.t;
   at_toplevel : bool;
   (* error reporting *)
   dupes : (Graph_code.node, bool) Hashtbl.t;
@@ -59,11 +60,11 @@ let _hmemo = Hashtbl.create 101
 
 let parse file =
   Common.memoized _hmemo file (fun () ->
-      try Parse_lisp.parse_program file with
+      try Parse_lisp.parse_program (Fpath.v file) with
       | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
       | exn ->
           let e = Exception.catch exn in
-          pr2_once
+          UCommon.pr2_once
             (spf "PARSE ERROR with %s, exn = %s" file (Exception.to_string e));
           [])
 
@@ -77,11 +78,19 @@ let find_existing_node env s candidates last_resort =
   |> List.find_opt (fun kind -> G.has_node (s, kind) env.g)
   ||| last_resort
 
-let _error s tok = failwith (spf "%s: %s" (Parse_info.string_of_info tok) s)
+let _error s tok = failwith (spf "%s: %s" (Tok.stringpos_of_tok tok) s)
 
 (*****************************************************************************)
 (* Add Node *)
 (*****************************************************************************)
+
+let nodeinfo (pos : Loc.t) : G.nodeinfo =
+  { Graph_code.pos; 
+    typ = None; 
+    props = [];
+    scip_symbol = None;
+    range = None;
+  }
 
 let add_node_and_edge_if_defs_mode env (s, kind) tok =
   let node = (s, kind) in
@@ -89,14 +98,15 @@ let add_node_and_edge_if_defs_mode env (s, kind) tok =
     if G.has_node node env.g then (
       env.pr2_and_log (spf "DUPE entity: %s" (G.string_of_node node));
       let nodeinfo = G.nodeinfo node env.g in
-      let orig_file = nodeinfo.G.pos.Parse_info.file in
-      env.log (spf " orig = %s" orig_file);
-      env.log (spf " dupe = %s" env.readable_file);
+      let orig_file = nodeinfo.G.pos.pos.file in
+      env.log (spf " orig = %s" !!orig_file);
+      env.log (spf " dupe = %s" !!(env.readable_file));
       Hashtbl.replace env.dupes node true)
     else
-      let pos = Parse_info.unsafe_token_location_of_info tok in
-      let pos = { pos with Parse_info.file = env.readable_file } in
-      let nodeinfo = { Graph_code.pos; typ = None; props = [] } in
+      let pos = Tok.unsafe_loc_of_tok tok in
+      let pos = pos |> Loc.fix_pos 
+           (fun pos -> { pos with Pos.file = env.readable_file }) in
+      let nodeinfo = nodeinfo pos in
       env.g |> G.add_node node;
       env.g |> G.add_edge (env.current, node) G.Has;
       env.g |> G.add_nodeinfo node nodeinfo);
@@ -116,7 +126,7 @@ let add_use_edge env (s, kind) tok =
   | _ ->
       env.pr2_and_log
         (spf "Lookup failure on %s (%s)" (G.string_of_node dst)
-           (Parse_info.string_of_info tok))
+           (Tok.stringpos_of_tok tok))
 
 (*****************************************************************************)
 (* Defs/Uses *)
@@ -124,12 +134,12 @@ let add_use_edge env (s, kind) tok =
 
 let rec extract_defs_uses env ast =
   if env.phase =*= Defs then (
-    let dir = Common2.dirname env.readable_file in
+    let dir = Filename.dirname !!(env.readable_file) in
     G.create_intermediate_directories_if_not_present env.g dir;
-    let node = (env.readable_file, E.File) in
+    let node = (!!(env.readable_file), E.File) in
     env.g |> G.add_node node;
     env.g |> G.add_edge ((dir, E.Dir), node) G.Has);
-  let env = { env with current = (env.readable_file, E.File) } in
+  let env = { env with current = (!!(env.readable_file), E.File) } in
   sexps_toplevel env ast
 
 (* ---------------------------------------------------------------------- *)
@@ -202,18 +212,18 @@ and sexp_bis env x =
 (* Main entry point *)
 (*****************************************************************************)
 
-let build ?(verbose = true) root files =
+let build (root : Fpath.t) files =
   let g = G.create () in
   G.create_initial_hierarchy g;
 
-  let chan = open_out_bin (Filename.concat root "pfff.log") in
+  let chan = open_out_bin (Filename.concat !!root "pfff.log") in
 
   let env =
     {
       g;
       phase = Defs;
       current = G.pb;
-      readable_file = "__filled_later__";
+      readable_file = Fpath.v "__filled_later__";
       at_toplevel = true;
       dupes = Hashtbl.create 101;
       log =
@@ -223,7 +233,7 @@ let build ?(verbose = true) root files =
       pr2_and_log =
         (fun s ->
           (*if verbose then *)
-          pr2 s;
+          UCommon.pr2 s;
           output_string chan (s ^ "\n");
           flush chan);
     }
@@ -231,22 +241,16 @@ let build ?(verbose = true) root files =
 
   (* step1: creating the nodes and 'Has' edges, the defs *)
   env.pr2_and_log "\nstep1: extract defs";
-  files
-  |> Console.progress ~show:verbose (fun k ->
-         List.iter (fun file ->
-             k ();
+  files |> List.iter (fun file ->
              let ast = parse file in
-             let readable_file = Common.readable ~root file in
-             extract_defs_uses { env with phase = Defs; readable_file } ast));
+             let readable_file = Filename_.readable ~root (Fpath.v file) in
+             extract_defs_uses { env with phase = Defs; readable_file } ast);
 
   (* step2: creating the 'Use' edges *)
   env.pr2_and_log "\nstep2: extract Uses";
-  files
-  |> Console.progress ~show:verbose (fun k ->
-         List.iter (fun file ->
-             k ();
+  files |> List.iter (fun file ->
              let ast = parse file in
-             let readable_file = Common.readable ~root file in
-             extract_defs_uses { env with phase = Uses; readable_file } ast));
+             let readable_file = Filename_.readable ~root (Fpath.v file) in
+             extract_defs_uses { env with phase = Uses; readable_file } ast);
 
   g

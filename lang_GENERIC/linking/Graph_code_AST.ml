@@ -1,9 +1,9 @@
 (* Yoann Padioleau
  *
- * Copyright (C) 2022 r2c
- *
+ * Copyright (C) 2022 Semgrep Inc.
  *)
 open Common
+open Fpath_.Operators
 module E = Entity_code
 module H = Graph_code_AST_helpers
 module L = Graph_code_AST_lookup
@@ -11,8 +11,6 @@ module T = Resolved_type
 module N = Resolved_name
 module Lang_specific = Graph_code_AST_lang_specific
 module Stat = Stat_code
-
-let logger = Logging.get_logger [ __MODULE__ ]
 
 (*****************************************************************************)
 (* Prelude *)
@@ -101,7 +99,7 @@ let extract_defs_uses env ast =
   (if env.phase =*= Defs then
    match env.current_parent with
    | base, E.File ->
-       let dir = Common2.dirname env.readable in
+       let dir = Filename.dirname env.readable in
        G.create_intermediate_directories_if_not_present env.g dir;
        let node = (base, E.File) in
        env.g |> G.add_node node;
@@ -114,8 +112,8 @@ let extract_defs_uses env ast =
         *)
        H.type_of_module_opt env base
        |> Option.iter (fun ty ->
-              logger#info "adding type for %s = %s" (G.string_of_node node)
-                (T.show ty);
+              Logs.info (fun m -> m "adding type for %s = %s" (G.string_of_node node)
+                (T.show ty));
               Hashtbl.add env.types node ty)
    | entname, E.Package ->
        let xs = N.dotted_ident_of_entname entname in
@@ -129,8 +127,6 @@ let extract_defs_uses env ast =
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
-let verbose = true
 
 (* TODO: too expensive to have all ASTs in memory? use lazy?
  * but then how to free memory between the 2 passes?
@@ -146,8 +142,11 @@ let build ~root ~hooks lang xs =
 
   (*  let lookup_fails = Common2.hash_with_default (fun () -> 0) in *)
   let env_for_file phase file ast =
-    let readable = if root == file then "<called_on_single_file>" else Common.readable ~root file in
-    logger#info "readable: %s" readable;
+    let readable = 
+      if Fpath.equal root (Fpath.v file) then "<called_on_single_file>" 
+      else !!(Filename_.readable ~root (Fpath.v file ))
+    in
+    Logs.info (fun m -> m "readable: %s" readable);
     let current_parent, current_qualifier =
       Lang_specific.top_parent_and_qualifier ~lang ~readable ~ast
     in
@@ -167,20 +166,14 @@ let build ~root ~hooks lang xs =
   in
 
   (* step1: creating the nodes and 'Has' edges, the defs *)
-  logger#info "STEP1: the definitions";
-  xs
-  |> Console.progress ~show:verbose (fun k ->
-         List.iter (fun (file, ast) ->
-             k ();
+  Logs.info (fun m -> m "STEP1: the definitions");
+  xs |> List.iter (fun (file, ast) ->
              let env = env_for_file Defs file ast in
-             extract_defs_uses env ast));
+             extract_defs_uses env ast);
 
-  logger#info "STEP2: the uses";
-  xs
-  |> Console.progress ~show:verbose (fun k ->
-         List.iter (fun (file, ast) ->
-             k ();
+  Logs.info (fun m -> m "STEP2: the uses");
+  xs |> List.iter (fun (file, ast) ->
              let env = env_for_file Uses file ast in
-             extract_defs_uses env ast));
+             extract_defs_uses env ast);
 
   (g, stats)

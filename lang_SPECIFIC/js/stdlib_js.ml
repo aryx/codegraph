@@ -63,7 +63,7 @@ let extract_defs file =
     Common.save_excursion Flag_parsing_js.jsx false (fun () ->
         Parse_js.tokens (Parsing_helpers.file file))
   in
-  let toks = Common.exclude TH.is_comment toks in
+  let toks = List_.exclude TH.is_comment toks in
   let trees =
     Lib_ast_fuzzy.mk_trees
       { Lib_ast_fuzzy.tokf = TH.info_of_tok; kind = TH.token_kind_of_tok }
@@ -86,7 +86,7 @@ let extract_defs file =
 let add_and_report_if_already_there already file str =
   if Hashtbl.mem already str then (
     let dupfile = Hashtbl.find already str in
-    pr2 (spf "entity %s defined both in %s and %s" str dupfile file);
+    UCommon.pr2 (spf "entity %s defined both in %s and %s" str dupfile file);
     true)
   else (
     Hashtbl.replace already str file;
@@ -114,7 +114,7 @@ let extract_from_sources files dst =
              "// ------------------------------------------------------";
            ]
            @ (xs
-             |> Common.map_filter (fun (kind, s) ->
+             |> List.filter_map (fun (kind, s) ->
                     let str =
                       match kind with
                       | E.Function -> spf "function %s() { }" s
@@ -143,9 +143,9 @@ let extract_from_sources files dst =
         "// Aux file";
         "// ------------------------------------------------------";
       ]
-    @ Common.cat auxfile
+    @ UFile.Legacy.cat auxfile
   in
   let s = String.concat "\n" lines in
-  Common.write_file ~file:dstfile s;
-  pr2 (spf "Standard Javascript library file %s is ready" dstfile);
+  UFile.Legacy.write_file ~file:dstfile s;
+  UCommon.pr2 (spf "Standard Javascript library file %s is ready" dstfile);
   ()

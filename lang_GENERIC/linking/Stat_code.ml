@@ -86,12 +86,12 @@ let elem_to_string categ elem = spf "%s: %d/%d" categ elem.good elem.total
 
 let to_string st =
   "categories:\n"
-  ^ (st.categories |> Common.hash_to_list
+  ^ (st.categories |> Hashtbl_.hash_to_list
     |> List.map (fun (categ, elem) -> elem_to_string categ elem)
     |> String.concat "\n")
   ^ "\nbiggest offenders:\n"
-  ^ (st.failures |> Common.hash_to_list |> Common.sort_by_val_highfirst
-   |> Common.take_safe 20
+  ^ (st.failures |> Hashtbl_.hash_to_list |> Assoc.sort_by_val_highfirst
+   |> List_.take_safe 20
     |> List.map (fun (str, cnt) -> spf "%s : %d" str cnt)
     |> String.concat "\n")
 

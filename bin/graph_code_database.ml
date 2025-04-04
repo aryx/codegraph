@@ -13,6 +13,7 @@
  * license.txt for more details.
  *)
 open Common
+open Fpath_.Operators
 module G = Graph_code
 module E = Entity_code
 module D = Database_code
@@ -32,7 +33,7 @@ module D = Database_code
 (* Main entry point *)
 (*****************************************************************************)
 
-let db_of_graph_code root g =
+let db_of_graph_code (root : Fpath.t) g =
   (* todo: if at some point we want to also leverage the
    * cross entity functionality of Database_code, e.g.
    * its e_good_examples_of_use field, then we need to
@@ -45,7 +46,7 @@ let db_of_graph_code root g =
 
   (* opti: using G.parent and check if G.not_found is slow *)
   let hnot_found =
-    G.node_and_all_children G.not_found g |> Common.hashset_of_list
+    G.node_and_all_children G.not_found g |> Hashtbl_.hashset_of_list
   in
   (* opti: using G.pred is super slow *)
   let use_pred = G.mk_eff_use_pred g in
@@ -75,7 +76,7 @@ let db_of_graph_code root g =
                      failwith (spf "No nodeinfo for %s" (G.string_of_node node))
                in
                let pos = nodeinfo.G.pos in
-               let file = pos.Parse_info.file in
+               let file = !!(pos.pos.file) in
                (* they should be in readable path format *)
                Hashtbl.replace hfiles file true;
                Hashtbl.replace hdirs (Filename.dirname file) true;
@@ -86,7 +87,7 @@ let db_of_graph_code root g =
                  pred
                  |> List.filter (fun n ->
                         try
-                          let file2 = G.file_of_node n g in
+                          let file2 = !!(G.file_of_node n g) in
                           file <> file2
                         with
                         | Not_found -> false)
@@ -98,11 +99,11 @@ let db_of_graph_code root g =
                    Database_code.e_kind = kind;
                    e_name = G.shortname_of_node node;
                    e_fullname = s;
-                   e_file = pos.Parse_info.file;
+                   e_file = !!(pos.pos.file);
                    e_pos =
                      {
-                       Common2.l = pos.Parse_info.line;
-                       c = pos.Parse_info.column;
+                       Pos.l = pos.pos.line;
+                       c = pos.pos.column;
                      };
                    e_number_external_users = nb_users;
                    (* todo *)
@@ -110,7 +111,7 @@ let db_of_graph_code root g =
                    e_properties = [];
                  }
                in
-               Common.push e res
+               Stack_.push e res
          | E.TopStmts
          | E.Module
          | E.Package
@@ -124,8 +125,8 @@ let db_of_graph_code root g =
 
   (* MultiDirs entities? they are done by codemap on the fly *)
   {
-    Database_code.root;
-    files = Common2.hkeys hfiles |> List.map (fun file -> (file, 0));
-    dirs = Common2.hkeys hdirs |> List.map (fun dir -> (dir, 1));
+    Database_code.root = !!root;
+    files = Common2_.hkeys hfiles |> List.map (fun file -> (file, 0));
+    dirs = Common2_.hkeys hdirs |> List.map (fun dir -> (dir, 1));
     entities = arr;
   }

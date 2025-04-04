@@ -3,12 +3,12 @@
  (libraries 
     str bigarray
     ocamlgraph
-    dyp
 
     compiler-libs ;; for lang_cmt 
     compiler-libs.common
 
     commons profiling
+    commons2_
     lib_parsing
     graph_code
 
@@ -21,7 +21,7 @@
     ; for find_source, the find_source_files_or...
     parser_php.ast
     parser_cpp.ast
-    parser_c.ast
+    ;TODO parser_c.ast
     parser_lisp.ast
 
     ; for codegraph_build, in pfff (hopefully in ~/.opam)
@@ -29,7 +29,7 @@
     pfff-lang_js-analyze ; Stdlib_js
     pfff-lang_ml-analyze
     parser_cpp.menhir ; Parse_cpp.init_defs
-    pfff-lang_c-analyze
+    ;TODO pfff-lang_c-analyze
     pfff_lang_php_analyze
     pfff-lang_lisp-analyze
 
@@ -56,7 +56,7 @@
     pfff-lang_GENERIC_linking
 
     ; in lang_SPECIFIC/pfff-bytecode
-    pfff-lang_cmt pfff-lang_cmt-analyze
+    ;TODO pfff-lang_cmt pfff-lang_cmt-analyze
 
  )
  ; for ocamldebug

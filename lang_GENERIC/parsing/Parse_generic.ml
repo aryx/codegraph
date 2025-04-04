@@ -32,7 +32,7 @@ open Common
 (*****************************************************************************)
 
 (* See also Parse_target.parse_program in semgrep-core *)
-let parse_program lang file =
+let parse_program (lang : Lang.t) (file : Fpath.t) =
   match lang with
   | Lang.Python -> 
       let ast = Parse_python.parse_program file in
@@ -45,17 +45,17 @@ let parse_program lang file =
       Js_to_generic.program ast
   | Lang.Ocaml -> 
       let ast = Parse_ml.parse_program file in
-      Ml_to_generic.program ast
+      Ocaml_to_generic.program ast
   | _ -> failwith (spf "lang %s not supported yet" (Lang.to_string lang))
 
 (* coupling: mostly a copy paste of
  * Parse_target.parse_and_resolve_name_use_pfff_or_treesitter in semgrep-core *)
-let parse_and_resolve_name lang file =
+let parse_and_resolve_name (lang : Lang.t) (file : Fpath.t) =
   let ast = parse_program lang file in
   (* to be deterministic, reset the gensym; anyway right now semgrep is
    * used only for local per-file analysis, so no need to have a unique ID
    * among a set of files in a project like codegraph.
    *)
-  AST_generic.SId.unsafe_reset_counter();
+  (* TODO? AST_generic.SId.unsafe_reset_counter(); *)
   Naming_AST.resolve lang ast;
   ast

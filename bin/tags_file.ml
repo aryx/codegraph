@@ -13,7 +13,6 @@
  * license.txt for more details.
  *)
 open Common
-module PI = Parse_info
 module E = Entity_code
 
 (*****************************************************************************)
@@ -57,7 +56,7 @@ type tag = {
   (* offset of beginning of tag_definition_text, when have 0-indexed filepos *)
   byte_offset : int;
   (* only used by vim *)
-  kind : Entity_code.entity_kind;
+  kind : Entity_code.kind;
 }
 
 let mk_tag s1 s2 i1 i2 k =
@@ -89,10 +88,10 @@ let fake_defs = [
 
 (* helpers used externally by language taggers *)
 let tag_of_info filelines info kind =
-  let line = PI.line_of_info info in
-  let pos = PI.pos_of_info info in
-  let col = PI.col_of_info info in
-  let s = PI.str_of_info info in
+  let line = Tok.line_of_tok info in
+  let pos = Tok.bytepos_of_tok info in
+  let col = Tok.col_of_tok info in
+  let s = Tok.content_of_tok info in
   mk_tag filelines.(line) s line (pos - col) kind
 
 (* C-s for "kind" in http://ctags.sourceforge.net/FORMAT *)
@@ -138,20 +137,20 @@ let add_method_tags_when_unambiguous files_and_defs =
     files_and_defs
     |> List.map (fun (_file, tags) ->
            tags
-           |> Common.map_filter (fun t ->
+           |> List.filter_map (fun t ->
                   match t.kind with
                   | E.Class
                   | E.Function
                   | E.Constant ->
                       Some t.tagname
                   | _ -> None))
-    |> List.flatten |> Common.hashset_of_list
+    |> List.flatten |> Hashtbl_.hashset_of_list
   in
   let h_grouped_methods =
     files_and_defs
     |> List.map (fun (_file, tags) ->
            tags
-           |> Common.map_filter (fun t ->
+           |> List.filter_map (fun t ->
                   match t.kind with
                   | E.Method ->
                       if t.tagname =~ ".*::\\(.*\\)" then
@@ -161,7 +160,7 @@ let add_method_tags_when_unambiguous files_and_defs =
                           ("method tag should contain '::[, got: " ^ t.tagname)
                   | _ -> None)
            (* could skip the group_assoc_bykey and do Hashtbl.find_all below instead *))
-    |> List.flatten |> Common.group_assoc_bykey_eff |> Common.hash_of_list
+    |> List.flatten |> Assoc.group_assoc_bykey_eff |> Hashtbl_.hash_of_list
   in
   (* step2: add method tag when no ambiguity *)
   files_and_defs
@@ -193,22 +192,22 @@ let add_method_tags_when_unambiguous files_and_defs =
 let threshold_long_line = 1000
 
 let generate_TAGS_file tags_file files_and_defs =
-  Common.with_open_outfile tags_file (fun (pr_no_nl, _chan) ->
+  UFile.Legacy.with_open_outfile tags_file (fun (pr_no_nl, _chan) ->
       pr_no_nl header;
       files_and_defs
       |> List.iter (fun (file, defs) ->
              let all_defs =
                defs
-               |> Common.map_filter (fun tag ->
+               |> List.filter_map (fun tag ->
                       if
                         String.length tag.tag_definition_text
                         > threshold_long_line
                       then (
-                        pr2_once
+                        UCommon.pr2_once
                           (spf "WEIRD long string in %s, passing the tag" file);
                         None)
                       else Some (string_of_tag tag))
-               |> Common.join ""
+               |> String.concat ""
              in
              let size_defs = String.length all_defs in
              pr_no_nl (spf "%s,%d\n" file size_defs);
@@ -218,18 +217,18 @@ let generate_TAGS_file tags_file files_and_defs =
 
 (* http://vimdoc.sourceforge.net/htmldoc/tagsrch.html#tags-file-format *)
 let generate_vi_tags_file tags_file files_and_defs =
-  Common.with_open_outfile tags_file (fun (pr_no_nl, _chan) ->
+  UFile.Legacy.with_open_outfile tags_file (fun (pr_no_nl, _chan) ->
       let all_tags =
         files_and_defs
         |> List.map (fun (file, defs) ->
                defs
-               |> Common.map_filter (fun tag ->
+               |> List.filter_map (fun tag ->
                       if String.length tag.tag_definition_text > 300 then (
-                        pr2
+                        UCommon.pr2
                           (spf "WEIRD long string in %s, passing the tag" file);
                         None)
                       else Some (tag.tagname, (tag, file))))
-        |> List.flatten |> Common.sort_by_key_lowfirst
+        |> List.flatten |> Assoc.sort_by_key_lowfirst
       in
       all_tags
       |> List.iter (fun (_tagname, (tag, file)) ->

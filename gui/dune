@@ -5,6 +5,7 @@
    lablgtk2
 
    commons profiling
+   commons2_
  )
 (preprocess (pps ppx_deriving.show profiling.ppx))
 )

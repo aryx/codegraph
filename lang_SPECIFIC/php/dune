@@ -4,6 +4,7 @@
  (libraries
 
    commons profiling process_limits
+   commons2_
    lib_parsing
    graph_code
    parser_php.ast parser_php.menhir

@@ -5,12 +5,12 @@
 (* will manage optional skip list at root *)
 val files_of_root:
   lang:string ->
-  Common.dirname -> Common.filename list
+  Fpath.t (* root dir *) -> Common2_.filename list
 
 (* will manage optional skip list at root of vcs *)
 val files_of_dir_or_files:
   lang:string ->
-  Common.path list -> Common.filename list
+  Common2_.filename list -> Common2_.filename list
 
 
 val finder: string -> (Fpath.t list -> Fpath.t list)

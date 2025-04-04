@@ -26,12 +26,16 @@
 (* API *)
 (*****************************************************************************)
 
-let files_of_root lang root =
+(* TODO: use List_Files *)
+let files_of_root (_lang : Lang.t) (_root : Fpath.t) : string list =
+  failwith "TODO: files_of_root, use List_files"
+(*
   let files = 
-    Common.files_of_dir_or_files_no_vcs_nofilter [root] |> File.Path.of_strings in
+    Common.files_of_dir_or_files_no_vcs_nofilter [root] |> Fpath_.of_strings in
   let files, _skipped = 
     Skip_code.filter_files_if_skip_list ~root:[Fpath.v root] files in
   files |> File.Path.to_strings |> List.filter (fun file ->
       let langs = Lang.langs_of_filename (Fpath.v file) in
       List.mem lang langs
   )
+*)

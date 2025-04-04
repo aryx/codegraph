@@ -1,8 +1,8 @@
 (* UPDATE: this is mostly obsolete. You should use Find_target.ml instead. *)
 
-let logger = Logging.get_logger [__MODULE__]
-
-let finder lang =
+let finder _lang _xs =
+  failwith "TODO: finder"
+(*
   match lang with
 
   (* in pfff *)
@@ -31,35 +31,43 @@ let finder lang =
     Lib_parsing_ml.find_cmt_files_of_dir_or_files
 
   | _ -> failwith ("Find_source: unsupported language: " ^ lang)
-
-let skip_file dir =
-  Filename.concat dir "skip_list.txt"
+*)
 
 
 let files_of_dir_or_files ~lang xs =
+  ignore(lang, xs);
+  failwith "TODO: files_of_dir_or_files"
+  (* TODO: use Gitignore like in codemap *)
+(*
   let finder = finder lang in
-  let xs = List.map Common.fullpath xs |> File.Path.of_strings in
+  let xs = List.map Common.fullpath xs |> Fpath_.of_strings in
   finder xs |> Skip_code.filter_files_if_skip_list ~root:xs |> fst
   |> File.Path.to_strings
-
+*)
 
 (* todo: factorize with filter_files_if_skip_list?
  * less: a ~verbose argument to not always display the pr2 below?
 *)
-let files_of_root ~lang root =
+let files_of_root ~lang (root : Fpath.t) =
   let finder = finder lang in
-  let files = finder [Fpath.v root] in
+  let _files = finder [root] in
+  failwith "TODO: files_of_root"
+(*
 
+let skip_file dir =
+  Filename.concat dir "skip_list.txt"
+...
   let skip_list =
     if Sys.file_exists (skip_file root)
     then begin
-      logger#info "Using skip file: %s (for lang = %s)" (skip_file root) lang;
+      Logs.info (fun m -> m "Using skip file: %s (for lang = %s)" (skip_file root) lang);
       Skip_code.load (Fpath.v (skip_file root));
     end
     else []
   in
   Skip_code.filter_files skip_list ~root:(Fpath.v root) files |> fst
   |> File.Path.to_strings
+*)
 
 (*
   let root = Common.realpath dir in

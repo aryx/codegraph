@@ -13,10 +13,9 @@
  * license.txt for more details.
  *)
 open Common
+open Fpath_.Operators
 module G = Graph_code
 module E = Entity_code
-
-let logger = Logging.get_logger [ __MODULE__ ]
 
 (*****************************************************************************)
 (* Prelude *)
@@ -55,13 +54,13 @@ let defs_of_graph_code ?(verbose = false) g =
          let str, kind = n in
          try
            let nodeinfo = G.nodeinfo n g in
-           let file = nodeinfo.G.pos.Parse_info.file in
-           let line = nodeinfo.G.pos.Parse_info.line in
+           let file = !!(nodeinfo.G.pos.pos.file) in
+           let line = nodeinfo.G.pos.pos.line in
            let text =
              try
                let array =
                  Common.memoized hmemo_file_array file (fun () ->
-                     Common2.cat_array file)
+                     UFile.cat_array (Fpath.v file))
                in
                (* not sure why, but can't put an empty string for
                 * tag_definition_text; Emacs is then getting really confused
@@ -69,17 +68,17 @@ let defs_of_graph_code ?(verbose = false) g =
                array.(line)
              with
              | Invalid_argument _out_of_bound ->
-                 logger#error "PB accessing line %d of %s" line file;
+                 Logs.err (fun m -> m "PB accessing line %d of %s" line file);
                  ""
              | Sys_error _no_such_file ->
-                 pr2_once (spf "PB accessing file %s" file);
+                 UCommon.pr2_once (spf "PB accessing file %s" file);
                  ""
            in
            let tag =
              {
                Tags_file.tagname = str;
-               line_number = nodeinfo.G.pos.Parse_info.line;
-               byte_offset = nodeinfo.G.pos.Parse_info.charpos;
+               line_number = nodeinfo.G.pos.pos.line;
+               byte_offset = nodeinfo.G.pos.pos.bytepos;
                kind;
                tag_definition_text = text;
              }
@@ -87,7 +86,7 @@ let defs_of_graph_code ?(verbose = false) g =
            Hashtbl.add hfile_to_tags file tag;
            (* when add a tag for List.foo, also add foo.List *)
            let reversed_tagname =
-             Common.split "\\." str |> List.rev |> Common.join "."
+             String_.split ~sep:"\\." str |> List.rev |> String.concat "."
            in
            Hashtbl.add hfile_to_tags file
              { tag with Tags_file.tagname = reversed_tagname }
@@ -102,10 +101,10 @@ let defs_of_graph_code ?(verbose = false) g =
                  ()
              | _ ->
                  if List.mem G.not_found (G.parents n g) then ()
-                 else pr2 (spf "PB, nodeinfo not found for %s" str)));
-  Common2.hkeys hfile_to_tags
+                 else UCommon.pr2 (spf "PB, nodeinfo not found for %s" str)));
+  Common2_.hkeys hfile_to_tags
   |> List.map (fun file ->
          ( file,
            Hashtbl.find_all hfile_to_tags file
            |> List.map (fun tag -> (tag.Tags_file.byte_offset, tag))
-           |> Common.sort_by_key_lowfirst |> List.map snd ))
+           |> Assoc.sort_by_key_lowfirst |> List.map snd ))

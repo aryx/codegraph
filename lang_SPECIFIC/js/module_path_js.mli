@@ -1,6 +1,6 @@
 val resolve_path :
-  root:Common.dirname (* where to find node_modules *) ->
-  pwd:Common.dirname (* pwd of importer *) ->
+  root:Common2_.filename (* where to find node_modules *) ->
+  pwd:Common2_.filename (* pwd of importer *) ->
   string ->
   (* full path *)
-  Common.filename option
+  Common2_.filename option

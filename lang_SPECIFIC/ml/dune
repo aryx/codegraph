@@ -5,6 +5,7 @@
  (libraries
 
    commons profiling
+   commons2_
    lib_parsing
    graph_code
    parser_ocaml.ast parser_ocaml.menhir

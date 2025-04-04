@@ -43,7 +43,7 @@ let (lookup_fully_qualified2 :
           |> List.flatten
         in
         (* sanity check, quite expansive according to -profile *)
-        Common.group_assoc_bykey_eff children
+        Assoc.group_assoc_bykey_eff children
         |> List.iter (fun (k, xs) ->
                if
                  List.length xs > 1
@@ -55,8 +55,8 @@ let (lookup_fully_qualified2 :
                  (* todo: this will be a problem when go from class-level
                   * to method/field level dependencies
                   *)
-                 pr2 "WARNING: multiple entities with same name";
-                 pr2_gen (k, xs)));
+                 UCommon.pr2 "WARNING: multiple entities with same name";
+                 UCommon.pr2_gen (k, xs)));
 
         let str =
           match current with
@@ -65,7 +65,7 @@ let (lookup_fully_qualified2 :
         in
         let new_current =
           children
-          |> Common.find_some_opt (fun (s2, kind) ->
+          |> List_.find_some_opt (fun (s2, kind) ->
                  if str = s2 then Some (s2, kind) else None)
         in
         match new_current with

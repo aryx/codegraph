@@ -13,6 +13,7 @@
  * license.txt for more details.
  *)
 open Common
+open Fpath_.Operators
 module G = Graph_code
 
 (*****************************************************************************)
@@ -32,8 +33,8 @@ module G = Graph_code
 (* Helpers *)
 (*****************************************************************************)
 let kind_of_rank ~max_total n =
-  let percent = if max_total =|= 0 then 0 else Common2.pourcent n max_total in
-  let percent_round = percent / 10 * 10 in
+  let percent = if max_total =|= 0 then 0 else Common2_.pourcent n max_total in
+  let percent_round = Stdlib.(percent / 10 * 10) in
   spf "cover %d%%" percent_round
 
 (*****************************************************************************)
@@ -42,10 +43,10 @@ let kind_of_rank ~max_total n =
 
 let gen_rank_heatmap_layer g hentity_to_rank ~output =
   let group_by_file =
-    hentity_to_rank |> Common.hash_to_list
-    |> Common.map_filter (fun (node, v) ->
+    hentity_to_rank |> Hashtbl_.hash_to_list
+    |> List.filter_map (fun (node, v) ->
            try
-             let file = G.file_of_node node g in
+             let file = !!(G.file_of_node node g) in
              (* we want to make sure this node has a line, some
               * E.File could be there because file_of_node works for them
               * but they have no line, so let's filter them here
@@ -54,9 +55,9 @@ let gen_rank_heatmap_layer g hentity_to_rank ~output =
              Some (file, (node, v))
            with
            | Not_found -> None)
-    |> Common.group_assoc_bykey_eff
+    |> Assoc.group_assoc_bykey_eff
   in
-  let xs = hentity_to_rank |> Common.hash_to_list |> List.map snd in
+  let xs = hentity_to_rank |> Hashtbl_.hash_to_list |> List.map snd in
   let max_total = Common2.maximum xs in
 
   let layer =
@@ -78,7 +79,7 @@ let gen_rank_heatmap_layer g hentity_to_rank ~output =
                      nodes_and_rank
                      |> List.map (fun (n, v) ->
                             let info = G.nodeinfo n g in
-                            let line = info.Graph_code.pos.Parse_info.line in
+                            let line = info.Graph_code.pos.pos.line in
                             (line, kind_of_rank v ~max_total));
                    macro_level = [ (kind_of_rank max_file ~max_total, 1.) ];
                  } ));
@@ -117,7 +118,7 @@ let gen_statistics_layer ~root stats ~output =
     @ []
   in
   let layer =
-    Layer_code.simple_layer_of_parse_infos ~root
+    Layer_code.simple_layer_of_parse_infos ~root:!!root
       ~title:"Graph code error statistics" ~description:"" infos kinds
   in
   Layer_code.save_layer layer output;
@@ -131,12 +132,12 @@ let actions () =
   [
     ( "-gen_bottomup_layer",
       " <graph_file> <output>",
-      Arg_helpers.mk_action_2_arg (fun graph_file _output ->
-          let g = G.load graph_file in
+      Arg_.mk_action_2_arg (fun graph_file _output ->
+          let g = G.load (Fpath.v graph_file) in
           let hrank = G.bottom_up_numbering g in
-          let d, _, _ = Common2.dbe_of_filename graph_file in
+          let d, _, _ = Filename_.dbe_of_filename graph_file in
           let output =
-            Common2.filename_of_dbe (d, "layer_graph_code", "json")
+            Filename_.filename_of_dbe (d, "layer_graph_code", "json")
           in
           gen_rank_heatmap_layer g hrank output) );
   ]

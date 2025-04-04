@@ -13,6 +13,7 @@
  * license.txt for more details.
  *)
 open Common
+open Fpath_.Operators
 module J = JSON
 
 (*****************************************************************************)
@@ -76,7 +77,7 @@ let resolve_path ~root ~pwd str =
       |> List.find (fun path ->
              Sys.file_exists path && not (Sys.is_directory path))
     in
-    Some (Common.fullpath found)
+    Some !!(Rpath.canonical_exn (Fpath.v found))
   with
   | Not_found -> (
       (* look in package.json (of root/package or root/node_modules/package) *)
@@ -90,7 +91,8 @@ let resolve_path ~root ~pwd str =
         let package_json =
           package_json_candidates |> List.find Sys.file_exists
         in
-        let json = J.load_json package_json in
+        let str = UFile.Legacy.read_file package_json in
+        let json = J.json_of_string str in
         let main_path = main_entry_of_package_json package_json json in
         let dir = Filename.dirname package_json in
         let file = Filename.concat dir main_path in
@@ -101,5 +103,5 @@ let resolve_path ~root ~pwd str =
                Sys.file_exists path && not (Sys.is_directory path))
       with
       | Not_found ->
-          pr2 (spf "could not find a package.json for %s" str);
+          UCommon.pr2 (spf "could not find a package.json for %s" str);
           None)

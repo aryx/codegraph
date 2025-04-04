@@ -14,7 +14,7 @@
  *)
 open Common
 (* floats are the norm in graphics *)
-open Common2.ArithFloatInfix
+open Common2_.ArithFloatInfix
 
 open Figures
 open Model3
@@ -83,12 +83,12 @@ let draw_green_yellow_dependent_rows ~cr w i =
 
   for j = 0 to l.nb_elts -.. 1 do
     if w.m.DM.matrix.(i).(j) > 0 
-    then Common.push j i_uses;
+    then Stack_.push j i_uses;
   done;
 
   for i2 = 0 to l.nb_elts -.. 1 do
     if w.m.DM.matrix.(i2).(i) > 0
-    then Common.push i2 i_used_by;
+    then Stack_.push i2 i_used_by;
   done;
 
   !i_uses |> List.iter (fun i ->
@@ -120,7 +120,7 @@ let draw_green_yellow_dependent_rows ~cr w i =
 let motion_notify_refresher _da w ev () =
 
   let (x, y) = GdkEvent.Motion.x ev, GdkEvent.Motion.y ev in
-  pr2 (spf "motion device coord: %f, %f" x y);
+  UCommon.pr2 (spf "motion device coord: %f, %f" x y);
 
   let cr = Cairo.create w.overlay in
   M.scale_coordinate_system cr w;
@@ -129,7 +129,7 @@ let motion_notify_refresher _da w ev () =
   CairoH.clear cr;
 
   let (x, y) = Cairo.device_to_user cr x y in
-  pr2 (spf "motion user coord: %f, %f" x y);
+  UCommon.pr2 (spf "motion user coord: %f, %f" x y);
 
   (* less: update status bar? *)
   (match M.find_region_at_user_point w ~x ~y with

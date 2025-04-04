@@ -5,6 +5,7 @@
  (libraries
 
    commons profiling process_limits
+   commons2_
    lib_parsing
    
    graph_code

@@ -8,8 +8,6 @@ module AST = AST_generic
 module H = AST_generic_helpers
 module N = Resolved_name
 
-let logger = Logging.get_logger [ __MODULE__ ]
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -130,8 +128,8 @@ let of_ast_type file_or_package_qualifier ty =
              | None
              | Some (Global, _) ->
                 let rn = file_or_package_qualifier @ [ id ] in
-                logger#info "of_ast_type: trying to qualify %s with %s"
-                     (fst id) (N.to_entname rn);
+                Logs.info (fun m -> m "of_ast_type: trying to qualify %s with %s"
+                     (fst id) (N.to_entname rn));
 
                 (* let's hope, we have no way to call lookup_resolved_name()
                  * here because we are still in the Defs phase *)

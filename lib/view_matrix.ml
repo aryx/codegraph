@@ -12,10 +12,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the file
  * license.txt for more details.
  *)
-open Common2
+open Common2_
 open Common
+open Fpath_.Operators
 (* floats are the norm in graphics *)
-open Common2.ArithFloatInfix
+open Common2_.ArithFloatInfix
 
 open Figures
 
@@ -74,7 +75,7 @@ let color_of_node (_, kind) =
 let txt_of_node (s, kind) = 
   match kind with
   | E.Dir | E.File | E.MultiDirs -> 
-      Common2.basename s
+      Filename.basename s
   | E.Package | E.Module
   | E.Class 
   | E.Field | E.Constructor | E.Method | E.ClassConstant
@@ -149,7 +150,7 @@ let draw_cells cr w ~interactive_regions =
   for i = 0 to l.nb_elts -.. 1 do
     for j = 0 to l.nb_elts -.. 1 do
       let rect = rect_of_cell i j l in
-      Common.push (Cell (i, j), rect) interactive_regions;
+      Stack_.push (Cell (i, j), rect) interactive_regions;
       
       (* less: could also display intra dependencies *)
       if i =|= j then
@@ -210,7 +211,7 @@ let draw_left_tree cr w ~interactive_regions =
         let color = line_color_of_depth depth in
         CairoH.draw_rectangle ~cr ~line_width ~color rect;
 
-        Common.push (Row !i, rect) interactive_regions;
+        Stack_.push (Row !i, rect) interactive_regions;
 
         (* draw horizontal lines around cells *)
         let rect2 = {
@@ -288,7 +289,7 @@ let draw_left_tree cr w ~interactive_regions =
         let extent = CairoH.text_extents cr txt in
         let th = extent.Cairo.height in
         let tw = extent.Cairo.width in
-        let angle = -. (Common2.pi / 2.) in
+        let angle = -. (Common2_.pi / 2.) in
         Cairo.move_to cr 
           ((x + l.width_vertical_label / 2.) + (th / 2.0))
           (y + ((n * l.height_cell) /2.) + (tw / 2.0));
@@ -324,20 +325,20 @@ let draw_up_columns cr w ~interactive_regions =
       p = { x = x; y = 0. };
       q = { x = x + l.width_cell; y = l.y_start_matrix_up };
     } in
-    Common.push (Column j, rect) interactive_regions;
+    Stack_.push (Column j, rect) interactive_regions;
 
     CairoH.set_source_color ~cr ~color:"wheat" ();
     Cairo.move_to cr x y;
     (* because of the xy_ratio, this actually does not do a 45 deg line.
      * old: Cairo.line_to cr (x + (y_start_matrix_up / atan (pi / 4.)))  0.; 
      *)
-    Cairo.line_to cr (x + (l.y_start_matrix_up / atan (Common2.pi / 2.8)))  0.; 
+    Cairo.line_to cr (x + (l.y_start_matrix_up / atan (Common2_.pi / 2.8)))  0.; 
     Cairo.stroke cr;
 
     if j < l.nb_elts then begin
       let node = w.m.DM.i_to_name.(j) in
       Cairo.move_to cr (x + (l.width_cell / 2.0) + (th / 2.0)) (y - 0.001);
-      let angle = -. (Common2.pi / 4.) in
+      let angle = -. (Common2_.pi / 4.) in
       Cairo.rotate cr angle;
       let color = color_of_node node in
       let txt = txt_of_node node in
@@ -462,24 +463,24 @@ let draw_matrix cr w =
 
   let biggest_offenders =
     DM.score_upper_triangle_nodes w.m 
-    |> Common.sort_by_val_highfirst
-    |> Common.take_safe 4
-    |> Common.exclude (fun (_i, n) -> n =|= 0)
+    |> Assoc.sort_by_val_highfirst
+    |> List_.take_safe 4
+    |> List_.exclude (fun (_i, n) -> n =|= 0)
   in
   let nodes_major = biggest_offenders |> List.map fst in
   highlight_biggest_offenders cr w nodes_major;
   let biggest_cells =
     DM.score_upper_triangle_cells w.m
-     |> Common.sort_by_val_highfirst
-     |> Common.take_safe 20
-     |> Common.exclude (fun (_i, n) -> n =|= 0)
+     |> Assoc.sort_by_val_highfirst
+     |> List_.take_safe 20
+     |> List_.exclude (fun (_i, n) -> n =|= 0)
   in
   highlight_biggest_offenders_cells cr w (biggest_cells |> List.map fst);
     
   !Ctl._label_settext 
     (spf "#backward deps = %d (%.2f%%), - PB = %d, - ... = %d, - biggest = %d" 
        score_up
-       (Common2.pourcent_float score_up (score_up +.. score_down))
+       (Common2_.pourcent_float score_up (score_up +.. score_down))
        (DM.score_upper_triangle w.m nodes_pb)
        (DM.score_upper_triangle w.m (nodes_pb $+$ nodes_dots))
        (DM.score_upper_triangle w.m (nodes_pb $+$ nodes_dots $+$ nodes_major))
@@ -524,13 +525,13 @@ let add_path x path = path @ [x]
 
 let button_action _da w ev =
   let (x, y) = GdkEvent.Button.x ev, GdkEvent.Button.y ev in
-  pr2 (spf "button action device coord: %f, %f" x y);
+  UCommon.pr2 (spf "button action device coord: %f, %f" x y);
 
   let cr = Cairo.create w.overlay in
   M.scale_coordinate_system cr w;
 
   let (x, y) = Cairo.device_to_user cr x y in
-  pr2 (spf "button action user coord: %f, %f" x y);
+  UCommon.pr2 (spf "button action user coord: %f, %f" x y);
 
   (match M.find_region_at_user_point w ~x ~y with
   | None -> false
@@ -539,13 +540,13 @@ let button_action _da w ev =
       | Row i -> 
             (match GdkEvent.get_type ev, GdkEvent.Button.button ev with
             | `TWO_BUTTON_PRESS, 1 ->
-                pr2 (spf "double clicking on row i");
+                UCommon.pr2 (spf "double clicking on row i");
                 let node = w.m.DM.i_to_name.(i) in
                 w.path <- add_path (DM.Expand node) w.path;
                 recompute_matrix w;
                 true
             | `BUTTON_PRESS, 3 ->
-                pr2 (spf "right clicking on row i");
+                UCommon.pr2 (spf "right clicking on row i");
                 let node = w.m.DM.i_to_name.(i) in
                 w.path <- add_path (DM.Focus (node, DM.DepsOut)) w.path;
                 recompute_matrix w;
@@ -557,7 +558,7 @@ let button_action _da w ev =
       | Cell (i, j) -> 
             (match GdkEvent.get_type ev, GdkEvent.Button.button ev with
             | `BUTTON_PRESS, 1 ->
-                pr2 (spf "clicking on cell (%d, %d)" i j);
+                UCommon.pr2 (spf "clicking on cell (%d, %d)" i j);
                 let deps = 
                   DM.explain_cell_list_use_edges  (i, j) w.m w.model.gopti in
                 let ncount =
@@ -565,34 +566,34 @@ let button_action _da w ev =
                   then 10
                   else 50
                 in
-                let xs = Common.take_safe 1000 deps in
+                let xs = List_.take_safe 1000 deps in
                 let grouped_deps = 
                   Graph_code.group_edges_by_files_edges xs 
                     w.model.g_deprecated in
                 let str = 
                   grouped_deps |> List.map (fun ((f1, f2), deps) ->
                     let final_file f =
-                      try  Common.readable ~root:w.model.root f
+                      try Filename_.readable ~root:w.model.root f
                       with Failure _ -> f
                     in
                     let f1 = final_file f1 in
                     let f2 = final_file f2 in
-                    spf "%s --> %s (%d)\n" f1 f2 (List.length deps) ^
-                    (Common.take_safe ncount deps |> List.map (fun (n1, n2) ->
+                    spf "%s --> %s (%d)\n" !!f1 !!f2 (List.length deps) ^
+                    (List_.take_safe ncount deps |> List.map (fun (n1, n2) ->
                       spf "            %s --> %s" 
                       (Graph_code.string_of_node n1)  
                       (Graph_code.string_of_node n2)
-                     ) |> Common.join "\n"
+                     ) |> String.concat "\n"
                     ) ^
                     (if List.length deps >= ncount then "\n   ...  \n" else "")
-                  ) |> Common.join "\n"
+                  ) |> String.concat "\n"
                 in
-                pr2 str;
+                UCommon.pr2 str;
                 Gui.dialog_text ~text:str ~title:"Cell explaination";
                 true
 
             | `BUTTON_PRESS, 3 ->
-                pr2 (spf "right clicking on cell (%d, %d)" i j);
+                UCommon.pr2 (spf "right clicking on cell (%d, %d)" i j);
                 if i =|= j
                 then begin
                   let node = w.m.DM.i_to_name.(j) in
@@ -609,13 +610,13 @@ let button_action _da w ev =
       | Column j ->
             (match GdkEvent.get_type ev, GdkEvent.Button.button ev with
             | `TWO_BUTTON_PRESS, 1 ->
-                pr2 (spf "double clicking on column j");
+                UCommon.pr2 (spf "double clicking on column j");
                 let node = w.m.DM.i_to_name.(j) in
                 w.path <- add_path (DM.Expand node) w.path;
                 recompute_matrix w;
                 true
             | `BUTTON_PRESS, 3 ->
-                pr2 (spf "right clicking on column j");
+                UCommon.pr2 (spf "right clicking on column j");
                 let node = w.m.DM.i_to_name.(j) in
                 w.path <- add_path (DM.Focus (node, DM.DepsIn)) w.path;
                 recompute_matrix w;

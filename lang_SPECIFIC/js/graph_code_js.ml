@@ -13,11 +13,11 @@
  * license.txt for more details.
 *)
 open Common
-
+open Either
+open Fpath_.Operators
 module E = Entity_code
 module G = Graph_code
 (*module PI = Parse_info*)
-
 open Ast_js
 
 (*****************************************************************************)
@@ -61,8 +61,8 @@ type env = {
   phase: phase;
 
   current: Graph_code.node;
-  file_readable: Common.filename;
-  root: Common.dirname; (* to find node_modules/ *)
+  file_readable: Common2_.filename;
+  root: Fpath.t; (* to find node_modules/ *)
 
   (* imports of external entities; also abused to create
    * fake imports of the entities defined in the current file *)
@@ -77,18 +77,18 @@ type env = {
   vars: (string, bool) Hashtbl.t;
 
   (* less: use it? could use to check if the import match the exports *)
-  exports: (Common.filename, string list) Hashtbl.t;
+  exports: (Common2_.filename, string list) Hashtbl.t;
 
   (* error reporting *)
   dupes: (Graph_code.node, bool) Hashtbl.t;
 
   (* this is for the abstract interpreter *)
   db: (qualified_name, Ast_js.var) Hashtbl.t;
-  asts: (Common.filename (* readable *)* Ast_js.a_program (* resolved*)) list ref;
+  asts: (Common2_.filename (* readable *)* Ast_js.a_program (* resolved*)) list ref;
 
   log: string -> unit;
   pr2_and_log: string -> unit;
-  lookup_fail: env -> Graph_code.node -> Parse_info.t -> unit;
+  lookup_fail: env -> Graph_code.node -> Tok.t -> unit;
 }
 and phase = Defs | Uses
 
@@ -106,12 +106,12 @@ let _hmemo = Hashtbl.create 101
 let parse file =
   Common.memoized _hmemo file (fun () ->
     try
-      Parse_js.parse_program file
+      Parse_js.parse_program (Fpath.v file)
     with
     | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
     | exn ->
         let e = Exception.catch exn in
-        pr2 (spf "PARSE ERROR with %s, exn = %s" file (Exception.to_string e));
+        UCommon.pr2 (spf "PARSE ERROR with %s, exn = %s" file (Exception.to_string e));
         if !error_recovery
         then []
         else
@@ -123,14 +123,14 @@ let parse file =
 (*****************************************************************************)
 
 let error s tok =
-  let err = spf "%s: %s" (Parse_info.string_of_info tok) s in
-  failwith err
+  failwith (spf "%s: %s" (Tok.content_of_tok tok) s)
 
 let s_of_n (s, _) =
   s
 
-let pos_of_tok tok file =
-  { (Parse_info.unsafe_token_location_of_info tok) with PI.file }
+let pos_of_tok (tok : Tok.t) (file : Fpath.t) =
+  let loc = Tok.unsafe_loc_of_tok tok in
+  loc |> Loc.fix_pos (fun pos -> { pos with file })
 
 let is_undefined_ok (src, _kindsrc) (dst, _kinddst) =
   src =~ "^node_modules/.*" ||
@@ -138,9 +138,7 @@ let is_undefined_ok (src, _kindsrc) (dst, _kinddst) =
   (* r2c: too specific? *)
   dst =~ "^src/images/"
 
-let fake s = Parse_info.fake_info s
-
-let unbracket (_, x, _) = x
+let fake tk s = Tok.fake_tok tk s
 
 let option = Option.iter
 
@@ -172,7 +170,7 @@ let is_local env n =
   List.mem s env.locals || Hashtbl.mem env.vars s
 
 let add_locals env vs =
-  let locals = vs |> Common.map_filter (fun (ent, def) ->
+  let locals = vs |> List.filter_map (fun (ent, def) ->
     let s = s_of_n ent.name in
     match def with
     | VarDef { v_kind = (Var, _); _} ->
@@ -199,6 +197,16 @@ let kind_of_expr_opt v_kind eopt =
 (*****************************************************************************)
 (* Add Node *)
 (*****************************************************************************)
+
+let nodeinfo (pos : Loc.t) : G.nodeinfo = 
+  { 
+    pos; 
+    typ = None; 
+    props = []; 
+    scip_symbol = None;
+    range = None;
+} 
+
 let add_node_and_edge_if_defs_mode env (name, kind) =
   let str = s_of_n name in
   let str' =
@@ -219,7 +227,7 @@ let add_node_and_edge_if_defs_mode env (name, kind) =
     (* already there? a dupe? *)
     | _ when G.has_node node env.g ->
         env.pr2_and_log (spf "DUPE entity: %s" (G.string_of_node node));
-        let orig_file = G.file_of_node node env.g in
+        let orig_file = !!(G.file_of_node node env.g) in
         env.log (spf " orig = %s" orig_file);
         env.log (spf " dupe = %s" env.file_readable);
         Hashtbl.replace env.dupes node true;
@@ -227,8 +235,8 @@ let add_node_and_edge_if_defs_mode env (name, kind) =
     | _ ->
         (* try but should never happen, see comment below *)
         try
-          let pos = pos_of_tok (snd name) env.file_readable in
-          let nodeinfo = { Graph_code. pos; typ = None; props = []; } in
+          let pos = pos_of_tok (snd name) (Fpath.v env.file_readable) in
+          let nodeinfo = nodeinfo pos in
           env.g |> G.add_node node;
           env.g |> G.add_edge (env.current, node) G.Has;
           env.g |> G.add_nodeinfo node nodeinfo;
@@ -292,7 +300,7 @@ let add_use_edge_candidates env (name, kind) (*scope*) =
 
 let rec extract_defs_uses env ast =
   if env.phase =*= Defs then begin
-    let dir = Common2.dirname env.file_readable in
+    let dir = Filename.dirname env.file_readable in
     G.create_intermediate_directories_if_not_present env.g dir;
     let node = (env.file_readable, E.File) in
     env.g |> G.add_node node;
@@ -350,16 +358,17 @@ and module_directive env x =
           let str1 = s_of_n name1 in
           let str2_opt = Option.map s_of_n name2opt in
           let path_opt = Module_path_js.resolve_path
-              ~root:env.root
+              ~root:(!!(env.root))
               ~pwd:(Filename.dirname env.file_readable)
               file in
           let readable =
             match path_opt with
             | None ->
                 env.pr2_and_log (spf "could not resolve path %s at %s" file
-                                   (Parse_info.string_of_info tok));
+                                   (Tok.stringpos_of_tok tok));
                 spf "NOTFOUND-|%s|.js" file
-            | Some fullpath -> Common.readable env.root fullpath
+            | Some fullpath -> 
+                    !!(Filename_.readable env.root (Fpath.v fullpath))
           in
           str2_opt |> Option.iter (fun str2 ->
             Hashtbl.replace env.imports str2 (mk_qualified_name readable str1)
@@ -516,7 +525,8 @@ and stmts env xs =
 (* ---------------------------------------------------------------------- *)
 and expr env e =
   match e with
-  | ExprTodo _ | Cast _ | TypeAssert _ -> failwith "ExprTodo|Cast|..."
+  | ExprTodo _ | Cast _ | TypeAssert _ | ParenExpr _ ->
+      failwith "ExprTodo|Cast|ParenExpr|..."
   | Ellipsis _ | DeepEllipsis _ | ObjAccessEllipsis _ | TypedMetavar _ -> ()
 
   | L (Bool _ | Num _ | String _ | Regexp _) -> ()
@@ -535,7 +545,7 @@ and expr env e =
   | Obj o ->
       obj_ env o
   | Arr xs ->
-      xs |> unbracket |> List.iter (expr env)
+      xs |> Tok.unbracket |> List.iter (expr env)
   | Class (c, nopt) ->
       let env =
         match nopt with
@@ -592,7 +602,7 @@ and expr env e =
 
   | New _ ->  (* TODO *) ()
 
-  | Conditional (e1, e2, e3) ->
+  | Conditional (e1, _, e2, _, e3) ->
       List.iter (expr env) [e1;e2;e3]
   | Xml x -> xml env x
 
@@ -609,7 +619,7 @@ and xml env x =
 
 and xhp env = function
   | XmlText _s -> ()
-  | XmlExpr e -> option (expr env) (unbracket e)
+  | XmlExpr e -> option (expr env) (Tok.unbracket e)
   | XmlXml x -> xml env x
 
 (* ---------------------------------------------------------------------- *)
@@ -618,7 +628,7 @@ and xhp env = function
 
 (* todo: create nodes if global var? *)
 and obj_ env xs =
-  xs |> unbracket |> List.iter (property env)
+  xs |> Tok.unbracket |> List.iter (property env)
 
 and type_ _env _t = ()
 
@@ -629,7 +639,7 @@ and parent env = function
 and class_ env c =
   List.iter (parent env) c.c_extends;
   List.iter (type_ env) c.c_implements;
-  List.iter (property env) (unbracket c.c_body)
+  List.iter (property env) (Tok.unbracket c.c_body)
 
 and field_classic env {fld_name = pname; fld_body = e; _} =
   property_name env pname;
@@ -655,8 +665,8 @@ and property_name env = function
 
 and fun_ env f =
   (* less: need fold_with_env here? can not use previous param in p_default? *)
-  parameters env f.f_params;
-  let params = f.f_params |> Common.map_filter (function
+  parameters env (Tok.unbracket f.f_params);
+  let params = f.f_params |> Tok.unbracket |> List.filter_map (function
     | ParamClassic p -> Some (s_of_n p.p_name)
     | ParamEllipsis _ -> None
     | ParamPattern _ -> None (* TODO *)
@@ -679,14 +689,14 @@ and parameter env = function
 (* Main entry point *)
 (*****************************************************************************)
 
-let build_gen ?(verbose=false) root files =
+let build_gen ?(verbose=false) (root : Fpath.t) files =
   let g = G.create () in
   G.create_initial_hierarchy g;
 
   (* use Hashtbl.find_all property *)
   let hstat_lookup_failures = Hashtbl.create 101 in
 
-  let chan = open_out_bin (Filename.concat root "pfff.log") in
+  let chan = open_out_bin (Filename.concat !!root "pfff.log") in
 
   let env = {
     g;
@@ -706,7 +716,7 @@ let build_gen ?(verbose=false) root files =
 
     log = (fun s -> output_string chan (s ^ "\n"); flush chan;);
     pr2_and_log = (fun s ->
-      if verbose then pr2 s;
+      if verbose then UCommon.pr2 s;
       output_string chan (s ^ "\n"); flush chan;
     );
     lookup_fail = (fun env dst loc ->
@@ -718,7 +728,7 @@ let build_gen ?(verbose=false) root files =
       in
       fprinter (spf "PB: lookup_fail on %s (in %s, at %s)"
                   (G.string_of_node dst) (G.string_of_node src)
-                  (Parse_info.string_of_info loc));
+                  (Tok.stringpos_of_tok loc));
       (* note: could also use Hashtbl.replace to count entities only once *)
       Hashtbl.add hstat_lookup_failures dst true;
     );
@@ -727,19 +737,17 @@ let build_gen ?(verbose=false) root files =
 
   (* step1: creating the nodes and 'Has' edges, the defs *)
   env.pr2_and_log "\nstep1: extract defs";
-  (Stdlib_js.path_stdlib::files) |> Console.progress ~show:verbose (fun k ->
-    List.iter (fun file ->
-      k();
+  (Stdlib_js.path_stdlib::files) |> List.iter (fun file ->
       let ast = parse file in
       let file_readable =
         if file = Stdlib_js.path_stdlib
         then "Stdlib.js"
-        else Common.readable ~root file
+        else !!(Filename_.readable ~root (Fpath.v file))
       in
       extract_defs_uses { env with
                           phase = Defs; file_readable; imports = Hashtbl.create 13;
                         } ast
-    ));
+    );
 
   (* step2: creating the 'Use' edges *)
 
@@ -752,39 +760,37 @@ let build_gen ?(verbose=false) root files =
   in
 
   env.pr2_and_log "\nstep2: extract uses";
-  files |> Console.progress ~show:verbose (fun k ->
-    List.iter (fun file ->
-      k();
+  files |> List.iter (fun file ->
       let ast = parse file in
-      let file_readable = Common.readable ~root file in
+      let file_readable = !!(Filename_.readable ~root (Fpath.v file)) in
       extract_defs_uses { env with
                           phase = Uses; file_readable;
                           locals = []; imports = Hashtbl.copy default_import;
                         } ast;
-      Common.push (file_readable, ast) env.asts;
+      Stack_.push (file_readable, ast) env.asts;
 
-    ));
+    );
 
   env.pr2_and_log "\nstep3: adjusting";
   G.remove_empty_nodes g [G.not_found; G.dupe; G.pb];
 
   (* less: lookup failures summary *)
-  let xs = Common2.hkeys hstat_lookup_failures in
+  let xs = Common2_.hkeys hstat_lookup_failures in
   let counts =
     xs |> List.map (fun (x)->
       G.string_of_node x,
       List.length (Hashtbl.find_all hstat_lookup_failures x))
-    |> Common.sort_by_val_highfirst
-    |> Common.take_safe 20
+    |> Assoc.sort_by_val_highfirst
+    |> List_.take_safe 20
   in
-  pr2 "Top lookup failures per modules";
-  counts |> List.iter (fun (s, n) -> pr2 (spf "%-30s = %d" s n));
+  UCommon.pr2 "Top lookup failures per modules";
+  counts |> List.iter (fun (s, n) -> UCommon.pr2 (spf "%-30s = %d" s n));
 
   (* finally return the graph *)
   g, env.db, !(env.asts)
 
 
-let build ?verbose root files =
+let build ?verbose (root : Fpath.t) files =
   let (g, _, _) = build_gen ?verbose root files in
   g
 
@@ -795,6 +801,6 @@ let build ?verbose root files =
  * while abstract-interpreting the code and its import/require so we
  * can actually even handle some dynamic imports.
 *)
-let build_for_ai root files =
+let build_for_ai (root : Fpath.t) files =
   let (_, db, asts) = build_gen ~verbose:false root files in
   db, asts

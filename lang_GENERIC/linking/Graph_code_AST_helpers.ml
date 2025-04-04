@@ -13,8 +13,6 @@ module T = Resolved_type
 module N = Resolved_name
 module Stat = Stat_code
 
-let logger = Logging.get_logger [ __MODULE__ ]
-
 (*****************************************************************************)
 (* Debugging helpers *)
 (*****************************************************************************)
@@ -59,9 +57,9 @@ let rec dotted_ident_of_exprkind_opt ekind =
   | _ -> None
 
 (* less: could be moved in AST_generic_helpers *)
-let info_of_name n =
-  match n with
-  | Id (id, _) | IdQualified { name_last = (id, _); _ } -> snd id
+let info_of_name (n : name) : Tok.t =
+  let (id, _id_info) = AST_generic_helpers.id_of_name n in
+  snd id
 
 (*****************************************************************************)
 (* Entity helpers *)
@@ -87,8 +85,8 @@ let entity_kind_of_definition _env (ent, defkind) =
       then E.Constant
       else E.Global
   | _ ->
-      logger#error "entity kind not handled yet: %s"
-        (string_of_any (Dk defkind));
+      Logs.err (fun m -> m "entity kind not handled yet: %s"
+        (string_of_any (Dk defkind)));
       E.Other "Todo"
 
 (*****************************************************************************)
@@ -103,7 +101,7 @@ let type_of_module_opt env entname =
      * which will allow lookup_type_of_dotted_ident_opt to work.
      *)
     let tk =
-      Parse_info.first_loc_of_file env.readable |> Parse_info.mk_info_of_loc
+      Tok.first_tok_of_file (Fpath.v env.readable)
     in
     let xs = N.dotted_ident_of_entname entname in
     Some (T.TN (xs |> List.map (fun s -> (s, tk))))
@@ -129,7 +127,7 @@ let type_of_definition_opt env dotted_ident (_ent, defkind) =
  * java-specific?
  *)
 let create_intermediate_packages_if_not_present g root xs =
-  let dirs = Common2.inits xs |> List.map (fun xs -> Common.join "." xs) in
+  let dirs = Common2.inits xs |> List.map (fun xs -> String.concat "." xs) in
   let dirs =
     match dirs with
     | "" :: xs -> xs
@@ -152,17 +150,17 @@ let create_intermediate_packages_if_not_present g root xs =
 (* Useful in Test.ml to intercept the position of all use edges.
  * alt: we could extend G.edgeinfo to contain a position
 *)
-let (hook_add_use_edge : (G.node -> G.node -> Parse_info.t -> unit) ref) = 
+let (hook_add_use_edge : (G.node -> G.node -> Tok.t -> unit) ref) = 
   ref (fun _ _ _ -> ())
 
 let add_use_edge env (name, kind) tok =
   let src = env.current_parent in
   let dst = (name, kind) in
-  logger#info "trying %s --> %s" (G.string_of_node src) (G.string_of_node dst);
+  Logs.info (fun m -> m "trying %s --> %s" (G.string_of_node src) (G.string_of_node dst));
   match () with
   | _ when not (G.has_node src env.g) ->
-      logger#error "LOOKUP SRC FAIL %s --> %s, src does not exist???"
-        (G.string_of_node src) (G.string_of_node dst)
+      Logs.err (fun m -> m "LOOKUP SRC FAIL %s --> %s, src does not exist???"
+        (G.string_of_node src) (G.string_of_node dst))
   | _ when G.has_node dst env.g -> 
       G.add_edge (src, dst) G.Use env.g;
       !hook_add_use_edge src dst tok;
@@ -173,21 +171,21 @@ let add_use_edge env (name, kind) tok =
      (match kind_original with
      | E.Package ->
          let fake_package =
-           Common.split "\\." name |> List.map (fun s -> s ^ "2")
+           String_.split ~sep:"\\." name |> List.map (fun s -> s ^ "2")
          in
-         let dst = (Common.join "." fake_package, kind_original) in
+         let dst = (String.concat "." fake_package, kind_original) in
          if not (G.has_node dst env.g) then
            (* disabled for now
               create_intermediate_packages_if_not_present
                 env.g parent_target
                 (fake_package |> List.map (fun s -> s,()));
            *)
-           logger#error "PB: lookup fail on %s (in %s)"
-             (G.string_of_node dst) (G.string_of_node src);
+           Logs.err (fun m -> m "PB: lookup fail on %s (in %s)"
+             (G.string_of_node dst) (G.string_of_node src));
          env.g |> G.add_edge (src, dst) G.Use;
          !hook_add_use_edge src dst tok;
      | _ ->
-         pr2
+         UCommon.pr2
            (spf "PB: lookup fail on %s (in %s)" (G.string_of_node dst)
               (G.string_of_node src));
          G.add_node dst env.g;
@@ -197,13 +195,13 @@ let add_use_edge env (name, kind) tok =
       )  
 
 let nodeinfo_of_id env (_id, tk) =
-  let loc = Parse_info.unsafe_token_location_of_info tk in
-  let loc = { loc with Parse_info.file = env.readable } in
-  { G.pos = loc; props = []; typ = None }
+  let loc = Tok.unsafe_loc_of_tok tk in
+  let loc = loc |> Loc.fix_pos (fun pos -> { pos with file = Fpath.v env.readable }) in
+  { G.pos = loc; props = []; typ = None; scip_symbol = None; range = None }
 
 let nodeinfo_of_file readable =
-  let loc = Parse_info.first_loc_of_file readable in
-  { G.pos = loc; props = []; typ = None }
+  let loc = Loc.first_loc_of_file (Fpath.v readable) in
+  { G.pos = loc; props = []; typ = None; scip_symbol = None; range = None }
 
 let (hook_add_nodeinfo: (G.node -> G.nodeinfo -> unit) ref) = 
   ref (fun _ _ -> ())

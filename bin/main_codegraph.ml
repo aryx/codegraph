@@ -3,15 +3,13 @@
  * appearing just here.
  *)
 open Common
-
+open Fpath_.Operators
 module GC = Graph_code
 module DM = Dependencies_matrix_code
 module DMBuild = Dependencies_matrix_build
 
 module Model = Model3
 module View = View3
-
-let logger = Logging.get_logger [__MODULE__]
 
 (*****************************************************************************)
 (* Purpose *)
@@ -198,21 +196,21 @@ let constraints_of_info_txt info_txt =
   (* pr2_gen info_txt; *)
   let rec aux current node =
     match node with
-    | Common2.Tree (node, xs) ->
+    | Common2_.Tree (node, xs) ->
       let title = node.Outline.title in
       let entry = 
         match title with
         | "__ROOT__" -> "."
         | _ -> Filename.concat current title
       in
-      let children = xs |> List.map (fun (Common2.Tree (node, _)) ->
+      let children = xs |> List.map (fun (Common2_.Tree (node, _)) ->
         (match entry with
         | "." -> node.Outline.title
         | _ -> Filename.concat entry node.Outline.title
         )
       )
       in
-      if not (null children) then begin
+      if not (List_.null children) then begin
         (* pr2_gen (entry, children); *)
         Hashtbl.add h entry children;
         let new_current =
@@ -241,34 +239,34 @@ let set_gc () =
 (*****************************************************************************)
 
 let dep_file_of_dir dir = 
-  Filename.concat dir Graph_code.default_filename
+  Filename.concat dir !!(Graph_code.default_filename)
 
-let build_model root =
-  let file = dep_file_of_dir root in
-  let g = Graph_code.load file in
+let build_model (root : Fpath.t) =
+  let file = dep_file_of_dir !!root in
+  let g = Graph_code.load (Fpath.v file) in
   let gopti = 
-    Common.cache_computation file ".opti"
+    Cache_disk.cache_computation file ".opti"
       (fun () -> Graph_code_opti.convert g)
   in
   (* todo: find -name "info.txt" *)
   let constraints =
-    if Sys.file_exists (Filename.concat root "info.txt")
+    if Sys.file_exists (Filename.concat !!root "info.txt")
     then begin
-      pr2 (spf "using %s" (Filename.concat root "info.txt"));
-      let info_txt = Info_code.load (Filename.concat root "info.txt") in
+      UCommon.pr2 (spf "using %s" (Filename.concat !!root "info.txt"));
+      let info_txt = Info_code.load (Filename.concat !!root "info.txt") in
       constraints_of_info_txt info_txt
     end
     else Hashtbl.create 0
   in
   { Model.g_deprecated = g; gopti = gopti; 
-    root = Common.fullpath root;
+    root;
     constraints 
   }
 
 let dir_node xs =     
-  (Common.join "/" xs, Entity_code.Dir)
+  (String.concat "/" xs, Entity_code.Dir)
 let package_node xs = 
-  (Common.join "." xs, Entity_code.Package)
+  (String.concat "." xs, Entity_code.Package)
 
 
 
@@ -291,29 +289,29 @@ let main_action xs =
   set_gc ();
   let _locale = GtkMain.Main.init () in
 
-  let dir = 
+  let dir : string (* TODO Fpath.t *) = 
     match xs with 
-    | [x] -> Common.fullpath x
+    | [x] -> Rpath.canonical_exn (Fpath.v x) |> Fpath.to_string
     | _ -> failwith "codegraph expects a single directory argument"
   in
   (* this is to allow to use codegraph from a subdir, see the comment
    * below about "slice of the graph"
    *)
-  let inits = Common2.inits_of_absolute_dir dir in
-  let root =
+  let inits = Common2_.inits_of_absolute_dir dir in
+  let root : Fpath.t =
     try 
       inits |> List.rev |> List.find (fun path -> 
-        Sys.file_exists (dep_file_of_dir path))
+        Sys.file_exists (dep_file_of_dir path)) |> Fpath.v
     with Not_found ->
       failwith (spf "could not find the codegraph file from %s or its parent"
                   dir);
   in
   (* let file = dep_file_of_dir root in *)
-  pr2 (spf "Using root = %s" root);
+  UCommon.pr2 (spf "Using root = %s" !!root);
   let model = build_model root in
 
   let path =
-    if root =*= dir
+    if Fpath.equal root (Fpath.v dir)
     then []
     else begin
       (* Propose a specific slice of the graph.
@@ -321,9 +319,9 @@ let main_action xs =
        * then Focus a/b/c, and optionally Expand a/b/c.
        *)
       let readable_subdir =
-        let xs = Common.split "/" root in
-        let ys = Common.split "/" dir in
-        let (a, b) = Common2.splitAt (List.length xs) ys in
+        let xs = String_.split ~sep:"/" !!root in
+        let ys = String_.split ~sep:"/" dir in
+        let (a, b) = Common2_.splitAt (List.length xs) ys in
         assert (xs =*= a);
         b
       in
@@ -332,14 +330,14 @@ let main_action xs =
         then dir_node, readable_subdir
         else package_node, 
               try
-               Common2.tails readable_subdir |> List.find (fun xs ->
+               Common2_.tails readable_subdir |> List.find (fun xs ->
                  GC.has_node (package_node xs) model.Model.g_deprecated
                )
               with Not_found ->
                 failwith "could not find a Dir or Package"
       in
       let (str, kind) = dir_or_package start in
-      pr2 (spf "focusing on %s %s" 
+      UCommon.pr2 (spf "focusing on %s %s" 
               (Entity_code.string_of_entity_kind kind) str);
       let rec aux before xs =
         match xs with
@@ -397,8 +395,8 @@ let options () = [
   " <int> when do we introduce '...' entries";
 
   ] @
-  Arg_helpers.options_of_actions action (all_actions()) @
-  Common2.cmdline_flags_devel () @
+  Arg_.options_of_actions action (all_actions()) @
+  Common2_.cmdline_flags_devel () @
   [
   "-verbose", Arg.Unit (fun () ->
     verbose := true;
@@ -406,7 +404,7 @@ let options () = [
   ), " ";
 
     "-version",   Arg.Unit (fun () -> 
-      pr2 (spf "CodeGraph version: %s" "TODO: codegraph version");
+      UCommon.pr2 (spf "CodeGraph version: %s" "TODO: codegraph version");
       exit 0;
     ), 
     " guess what";
@@ -424,15 +422,22 @@ let main () =
       (Filename.basename Sys.argv.(0))
       "https://github.com/facebook/pfff/wiki/Codegraph"
   in
+  
+  (* TODO: call setup_logging, use cmdliner and parse --debug, --info ... *)
+  Logs_.setup_basic ();
+  Logs.info (fun m -> m "Starting logging");
+
+(*
 
   if Sys.file_exists !log_config_file
   then begin
     Logging.load_config_file !log_config_file;
-    logger#info "loaded %s" !log_config_file;
+    Logs.info (fun m -> m "loaded %s" !log_config_file);
   end;
+*)
   
   (* does side effect on many global flags *)
-  let args = Arg_helpers.parse_options (options()) usage_msg Sys.argv in
+  let args = Arg_.parse_options (options()) usage_msg Sys.argv in
 
   (* must be done after Arg.parse, because Common.profile is set by it *)
   Profiling.profile_code "Main total" (fun () -> 
@@ -440,10 +445,10 @@ let main () =
     (* --------------------------------------------------------- *)
     (* actions, useful to debug subpart *)
     (* --------------------------------------------------------- *)
-    | xs when List.mem !action (Arg_helpers.action_list (all_actions())) -> 
-        Arg_helpers.do_action !action xs (all_actions())
+    | xs when List.mem !action (Arg_.action_list (all_actions())) -> 
+        Arg_.do_action !action xs (all_actions())
 
-    | _ when not (Common.null_string !action) -> 
+    | _ when not (String_.empty !action) -> 
         failwith ("unrecognized action or wrong params: " ^ !action)
 
     (* --------------------------------------------------------- *)
@@ -456,12 +461,12 @@ let main () =
     (* empty entry *)
     (* --------------------------------------------------------- *)
     | [] -> 
-        Arg_helpers.usage usage_msg (options())
+        Arg_.usage usage_msg (options())
     )
   )
 
 (*****************************************************************************)
 let _ =
-  Common.main_boilerplate (fun () -> 
+  UCommon.main_boilerplate (fun () -> 
     main ();
   )

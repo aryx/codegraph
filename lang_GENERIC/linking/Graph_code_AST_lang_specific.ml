@@ -6,7 +6,6 @@
 open Common
 module G = Graph_code
 module E = Entity_code
-module PI = Parse_info
 module H = Graph_code_AST_helpers
 module N = Resolved_name
 open AST_generic
@@ -32,12 +31,12 @@ let top_parent_and_qualifier ~lang ~readable ~ast :
   match lang with
   (* in Python, the directory and filename implicitely defines a package *)
   | Lang.Python ->
-      let tk = PI.first_loc_of_file readable |> PI.mk_info_of_loc in
+      let tk = Tok.first_tok_of_file (Fpath.v readable) in
       (* ex: from a/b/foo.py, we want to return
        *   - the parent node (a/b/foo, E.File) (without .py extension)
        *   - the qualifiers [a;b;foo]
        *)
-      let d, b, e = Common2.dbe_of_filename readable in
+      let d, b, e = Filename_.dbe_of_filename readable in
       (* coupling: ugly hack for pycheck; we should move out in a hook *)
       let b =
         match (b, e) with
@@ -48,7 +47,7 @@ let top_parent_and_qualifier ~lang ~readable ~ast :
         if d = "." then
           [ (b, tk) ]
         else
-          Common.split "/" d @ [ b ] |> List.map (fun s -> (s, tk))
+          String_.split ~sep:"/" d @ [ b ] |> List.map (fun s -> (s, tk))
       in
       (* basically replacing "/" with "." *)
       let entname = N.to_entname dotted_idents in

@@ -271,7 +271,7 @@ let model_of_list conv l =
   let cols = new GTree.column_list in
   let column = cols#add conv in
   let model = GTree.list_store cols in
-  pr2 (spf "model_of_list: length= %d" (List.length l));
+  UCommon.pr2 (spf "model_of_list: length= %d" (List.length l));
 
   Profiling.profile_code "model_of_list" (fun () -> 
   List.iter
@@ -330,9 +330,9 @@ let clist_connect ~callback:f (widget : string GList.clist) =
       
       (match widget#row_is_visible row with
       | `FULL -> 
-          pr2 "full";
+          UCommon.pr2 "full";
       | _ -> 
-          pr2 "here";
+          UCommon.pr2 "here";
           widget#moveto row column;
 
       );
@@ -428,7 +428,7 @@ let mk_right_click_menu_on_store view fpath =
   (* right click *)
   view#event#connect#button_press ~callback:(fun ev -> 
     if GdkEvent.Button.button ev =|= 3 then begin
-      pr2 "Right click";
+      UCommon.pr2 "Right click";
       let (x,y) = pos_of_ev ev in
       (match view#get_path_at_pos ~x ~y with
       | Some (path, _,_,_) -> 
@@ -575,7 +575,7 @@ let dialog_ask_generic ?width ~title fbuild fget_val  =
       true
     end
     else begin 
-      (* pr2 (i_to_s k); *)
+      (* UCommon.pr2 (i_to_s k); *)
       false
     end 
   ) |> ignore;
@@ -621,7 +621,7 @@ let dialog_ask_y_or_no ~text ~title  =
 
 let dialog_ask_filename ~title ~filename = 
 
-  let (res: filename option ref) = ref None in
+  let (res: Common2_.filename option ref) = ref None in
 
   let filew = GWindow.file_selection ~title ~filename ~modal:true () in
   filew#connect#destroy ~callback: GMain.Main.quit |> ignore;
@@ -712,7 +712,7 @@ let gmain_idle_add ~prio callback =
       try 
         callback ()
       with exn ->
-        pr2 (Common2.exn_to_s_with_backtrace exn);
+        UCommon.pr2 (Common2_.exn_to_s_with_backtrace exn);
         raise exn
     )
   else begin
@@ -730,7 +730,7 @@ let gmain_timeout_add ~ms ~callback =
       try 
         callback ()
       with exn ->
-        pr2 (Common2.exn_to_s_with_backtrace exn);
+        UCommon.pr2 (Common2_.exn_to_s_with_backtrace exn);
         raise exn
     )
   else begin

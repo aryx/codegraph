@@ -13,11 +13,11 @@
  * license.txt for more details.
  *)
 open Common
+open Fpath_.Operators
 open Ast_php
 module Ast = Ast_php
 module E = Entity_code
 module G = Graph_code
-module PI = Parse_info
 
 (*****************************************************************************)
 (* Prelude *)
@@ -81,10 +81,10 @@ type env = {
    * computed as we may need to lookup entities up in the parents.
    *)
   (* phase_defs: ... list ref; *)
-  phase_inheritance : (current * (Ast.name * E.entity_kind)) list ref;
-  phase_use : (current * (Ast.name * E.entity_kind)) list ref;
+  phase_inheritance : (current * (Ast.name * E.kind)) list ref;
+  phase_use : (current * (Ast.name * E.kind)) list ref;
   phase_use_lookup :
-    (current * (bool (*xhp*) * (Ast.name * Ast.ident) * E.entity_kind)) list ref;
+    (current * (bool (*xhp*) * (Ast.name * Ast.ident) * E.kind)) list ref;
   phase_use_other : (unit -> unit) list ref;
   (* post processing phase, try to resolve $o->foo() method calls *)
   phase_class_analysis : (current * Ast.name) list ref;
@@ -94,7 +94,7 @@ type env = {
    * We use the Hashtbl.find_all property of the hashtbl below.
    * The pair of filenames is readable * fullpath.
    *)
-  dupes : (Graph_code.node, Common.filename * Common.filename) Hashtbl.t;
+  dupes : (Graph_code.node, Common2_.filename * Common2_.filename) Hashtbl.t;
   (* to optimize things, to avoid calling G.Parent *)
   not_found : (Graph_code.node, bool) Hashtbl.t;
   (* in many files like scripts/ people reuse the same function name. This
@@ -112,16 +112,16 @@ type env = {
   stats : Graph_code.statistics;
   log : string -> unit;
   pr2_and_log : string -> unit;
-  is_skip_error_file : Common.filename (* readable *) -> bool;
+  is_skip_error_file : Common2_.filename (* readable *) -> bool;
   (* to print file paths in readable format or absolute *)
-  path : Common.filename -> string;
+  path : Common2_.filename -> string;
 }
 
 and phase = Defs | Inheritance | Uses
 
 and current = {
   node : Graph_code.node;
-  readable : Common.filename;
+  readable : Common2_.filename;
   (* namespace *)
   qualifier : Ast_php.qualified_ident;
   import_rules : (string * Ast_php.qualified_ident) list;
@@ -139,19 +139,19 @@ and resolved_name = R of string (* fully resolved name, namespace-wise *)
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-let ( ==~ ) = Common2.( ==~ )
+let ( ==~ ) = Common2_.( ==~ )
 
 let parse env file =
   try
     Common.save_excursion Flag_parsing_php.strict_lexer true (fun () ->
-        let cst = Parse_php.parse_program file in
+        let cst = Parse_php.parse_program (Fpath.v file) in
         let ast = Ast_php_build.program cst in
         ast)
   with
   | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
   | exn ->
       let e = Exception.catch exn in
-      env.stats.G.parse_errors |> Common.push file;
+      env.stats.G.parse_errors |> Stack_.push (Fpath.v file);
       env.pr2_and_log
         (spf "PARSE ERROR with %s, exn = %s" (env.path file)
            (Exception.to_string e));
@@ -206,7 +206,7 @@ let privacy_of_modifiers modifiers =
 
 let property_of_modifiers modifiers =
   modifiers |> List.map fst
-  |> Common.map_filter (function
+  |> List.filter_map (function
        | Public
        | Private
        | Protected ->
@@ -220,7 +220,7 @@ let normalize str =
   str |> String.lowercase_ascii (* php is case insensitive *)
   |> Str.global_replace (Str.regexp "-") "_" (* xhp is "dash" insensitive *)
 
-let fb = PI.fake_bracket
+let fb = Tok.fake_bracket
 
 (*****************************************************************************)
 (* Namespace *)
@@ -239,12 +239,12 @@ let (ident_of_name : Ast.name -> Ast.ident) = function
   | x ->
       failwith
         (spf "was expecting an ident not a qualified ident at %s"
-           (Ast.tok_of_name x |> Parse_info.string_of_info))
+           (Ast.tok_of_name x |> Tok.stringpos_of_tok))
 
 let add_prefix qu =
   match qu with
   | [] -> ""
-  | x :: xs -> (x :: xs |> List.map Ast.str_of_ident |> Common.join "\\") ^ "\\"
+  | x :: xs -> (x :: xs |> List.map Ast.str_of_ident |> String.concat "\\") ^ "\\"
 
 let prune_special_root xs =
   match xs with
@@ -266,7 +266,7 @@ let fully_qualified_candidates cur name _kind =
       | Not_found -> [ name; cur.qualifier @ name ])
 
 let (strtok_of_name :
-      env -> Ast.name -> Entity_code.entity_kind -> resolved_name Ast.wrap) =
+      env -> Ast.name -> Entity_code.kind -> resolved_name Ast.wrap) =
  fun env name kind ->
   let tokopt =
     match name with
@@ -276,14 +276,14 @@ let (strtok_of_name :
   let candidates = fully_qualified_candidates env.cur name kind in
   try
     candidates
-    |> Common.find_some (fun fullname ->
+    |> List_.find_some (fun fullname ->
            let str =
-             fullname |> List.map Ast.str_of_ident |> Common.join "\\"
+             fullname |> List.map Ast.str_of_ident |> String.concat "\\"
            in
            if G.has_node (str, kind) env.g then Some (R str, tokopt) else None)
   with
   | Not_found ->
-      let str = name |> List.map Ast.str_of_ident |> Common.join "\\" in
+      let str = name |> List.map Ast.str_of_ident |> String.concat "\\" in
       (R str, tokopt)
 
 let (strtok_of_class_name : env -> Ast.hint_type -> resolved_name Ast.wrap) =
@@ -320,7 +320,7 @@ let add_node_and_has_edge2 ?(props = []) env (ident, kind) =
   in
   let node = (str, kind) in
   if G.has_node node env.g then
-    let file = Parse_info.file_of_info (Ast.tok_of_ident ident) in
+    let file = !!(Tok.file_of_tok (Ast.tok_of_ident ident)) in
     (* todo: look if is_skip_error_file in which case populate
      * a env.dupe_renaming
      *)
@@ -350,13 +350,18 @@ let add_node_and_has_edge2 ?(props = []) env (ident, kind) =
      * the duplicate are all in a skip_errors dir).
      *)
     env.g |> G.add_edge (env.cur.node, node) G.Has;
-    let pos =
-      Parse_info.unsafe_token_location_of_info (Ast.tok_of_ident ident)
-    in
-    let pos = { pos with Parse_info.file = env.cur.readable } in
+    let pos = Tok.unsafe_loc_of_tok (Ast.tok_of_ident ident) in
+    let pos = pos |> Loc.fix_pos 
+           (fun pos -> { pos with file = Fpath.v env.cur.readable }) in
     let typ = None in
     (* todo *)
-    let nodeinfo = { Graph_code.pos; props; typ } in
+    let nodeinfo = { 
+          Graph_code.pos; 
+          props; 
+          typ;
+          scip_symbol = None;
+          range = None;
+        } in
     env.g |> G.add_nodeinfo node nodeinfo);
   (* for dupes like main(), but also dupe classes, or methods of dupe
    * classe, it's better to keep 'current' as the current File so
@@ -377,11 +382,11 @@ let add_node_and_has_edge ?props a b =
 let lookup_fail env tokopt dst =
   let info = Ast.tok_of_ident ("", tokopt) in
   let file, line =
-    (Parse_info.file_of_info info, Parse_info.line_of_info info)
+    (Tok.file_of_tok info, Tok.line_of_tok info)
   in
   let fprinter =
     if env.phase =*= Inheritance then env.pr2_and_log
-    else if file =~ ".*third-party" || file =~ ".*third_party" then fun _s -> ()
+    else if !!file =~ ".*third-party" || !!file =~ ".*third_party" then fun _s -> ()
     else
       match snd dst with
       (* todo: fix those too | E.ClassConstant *)
@@ -391,10 +396,10 @@ let lookup_fail env tokopt dst =
           env.pr2_and_log
       | _ -> env.log
   in
-  env.stats.G.lookup_fail |> Common.push (info, dst);
+  env.stats.G.lookup_fail |> Stack_.push (info, dst);
   fprinter
     (spf "PB: lookup fail on %s (at %s:%d)" (G.string_of_node dst)
-       (env.path file) line)
+       (env.path !!file) line)
 
 (* G.parent is extremely slow in ocamlgraph so need memoize *)
 let _hmemo_class_exits = Hashtbl.create 101
@@ -469,8 +474,8 @@ let add_use_edge_bis a b =
 let add_use_edge ?(phase = Uses) env n =
   match phase with
   | Defs -> raise Impossible
-  | Inheritance -> env.phase_inheritance |> Common.push (env.cur, n)
-  | Uses -> env.phase_use |> Common.push (env.cur, n)
+  | Inheritance -> env.phase_inheritance |> Stack_.push (env.cur, n)
+  | Uses -> env.phase_use |> Stack_.push (env.cur, n)
 
 (* why not call add_use_edge() and benefit from the error reporting
  * there? because instanceOf check are less important so
@@ -479,7 +484,7 @@ let add_use_edge ?(phase = Uses) env n =
 let add_use_edge_instanceof env (name, kind) =
   let env = { env with phase = Uses } in
   env.phase_use_other
-  |> Common.push (fun () ->
+  |> Stack_.push (fun () ->
          let (R x) = str_of_name env name kind in
          let node = (x, kind) in
          if not (G.has_node node env.g) then
@@ -490,7 +495,7 @@ let add_use_edge_instanceof env (name, kind) =
 let add_use_edge_maybe_class env entity tokopt =
   let env = { env with phase = Uses } in
   env.phase_use_other
-  |> Common.push (fun () ->
+  |> Stack_.push (fun () ->
          (* less: do case insensitive? handle conflicts? *)
          if G.has_node (entity, E.Class) env.g then
            match env.cur.readable with
@@ -519,7 +524,7 @@ let lookup_inheritance g (R aclass, amethod_or_field_or_constant) tokopt =
       let full_name = fst current ^ "." ^ amethod_or_field_or_constant in
       let res =
         children
-        |> Common.find_some_opt (fun (s2, kind) ->
+        |> List_.find_some_opt (fun (s2, kind) ->
                if
                  full_name = s2
                  (* todo? pass a is_static extra param to lookup?
@@ -541,7 +546,7 @@ let lookup_inheritance g (R aclass, amethod_or_field_or_constant) tokopt =
            *)
           let parents_inheritance = G.succ current G.Use g in
           breath parents_inheritance
-  and breath xs = xs |> Common.find_some_opt depth in
+  and breath xs = xs |> List_.find_some_opt depth in
   depth (aclass, E.Class)
 [@@profiling]
 
@@ -558,8 +563,8 @@ let add_use_edge_lookup2 xhp env (name, ident) kind =
   | Some ((R str, tokopt), kind2) ->
       let tok = Ast.tok_of_ident ident in
       (match kind2 with
-      | E.Method -> env.stats.G.method_calls |> Common.push (tok, true)
-      | E.Field -> env.stats.G.field_access |> Common.push (tok, true)
+      | E.Method -> env.stats.G.method_calls |> Stack_.push (tok, true)
+      | E.Field -> env.stats.G.field_access |> Stack_.push (tok, true)
       | E.ClassConstant -> ()
       | _ -> raise Impossible);
       add_use_edge_bis env ([ (str, tokopt) ], kind2)
@@ -602,7 +607,7 @@ let add_use_edge_lookup2 xhp env (name, ident) kind =
 
 (* TODO: diff with add_use_edge_lookup ?? *)
 let add_use_edge_lookup ?(xhp = false) env a b =
-  env.phase_use_lookup |> Common.push (env.cur, (xhp, a, b))
+  env.phase_use_lookup |> Stack_.push (env.cur, (xhp, a, b))
 
 (* todo: add unit test for this
  * todo: this is buggy, you can't use lookup_inheritance in the
@@ -644,7 +649,7 @@ let rec extract_defs_uses env ast readable =
   let env =
     { env with cur = { env.cur with node = (readable, E.File); readable } }
   in
-  (let dir = Common2.dirname env.cur.readable in
+  (let dir = Filename.dirname env.cur.readable in
    G.create_intermediate_directories_if_not_present env.g dir;
    env.g |> G.add_node (env.cur.readable, E.File);
    env.g |> G.add_edge ((dir, E.Dir), (env.cur.readable, E.File)) G.Has);
@@ -715,7 +720,7 @@ and stmt_bis env x =
   | Return (_, eopt)
   | Break (_, eopt)
   | Continue (_, eopt) ->
-      Common2.opt (expr env) eopt
+      Option.iter (expr env) eopt
   (* TODO: does anything special need to be done for Label and Goto? *)
   | Label (_, _, st) -> stmt env st
   | Goto _ -> ()
@@ -724,7 +729,7 @@ and stmt_bis env x =
       catches env cs;
       finallys env fs
   | StaticVars (_, xs) ->
-      xs |> List.iter (fun (_name, eopt) -> Common2.opt (expr env) eopt)
+      xs |> List.iter (fun (_name, eopt) -> Option.iter (expr env) eopt)
   (* could add entity for that? *)
   | Global (_, xs) -> exprl env xs
 
@@ -766,7 +771,7 @@ and func_def env def =
   |> List.iter (function
        | ParamClassic p ->
            (* less: add deps to type hint? *)
-           Common2.opt (expr env) p.p_default
+           Option.iter (expr env) p.p_default
        | ParamEllipsis _ -> ());
   stmt env def.f_body
 
@@ -825,7 +830,7 @@ and class_def env def =
              if privacy_of_modifiers fld.cv_modifiers =*= E.Protected
              then adjust_edge_protected env fld def.c_extends;
          *)
-         Common2.opt (expr env) fld.cv_value);
+         Option.iter (expr env) fld.cv_value);
   def.c_methods
   |> List.iter (fun def ->
          (* less: static? be more precise at some point *)
@@ -938,17 +943,17 @@ and expr env x =
                 (Call
                    ( Class_get (Id [ (env.cur.self, tok) ], tok, Id name2),
                      fb tok es ));
-              env.phase_dispatch |> Common.push (env.cur, name2)
+              env.phase_dispatch |> Stack_.push (env.cur, name2)
               (* need class analysis ... *)
           | _ ->
-              env.phase_class_analysis |> Common.push (env.cur, name2);
+              env.phase_class_analysis |> Stack_.push (env.cur, name2);
               expr env e1;
               argl env es)
       | _ ->
           let tok =
             raise Todo (* Meta_ast_php.toks_of_any (Expr2 e) |> List.hd *)
           in
-          env.stats.G.unresolved_calls |> Common.push tok;
+          env.stats.G.unresolved_calls |> Stack_.push tok;
           expr env e;
           argl env es)
   | Throw (_, e) -> expr env e
@@ -973,17 +978,17 @@ and expr env x =
       | Id name1, e2 ->
           add_use_edge env (name1, E.Class);
           let tok = Ast.tok_of_name name1 in
-          env.stats.G.unresolved_class_access |> Common.push tok;
+          env.stats.G.unresolved_class_access |> Stack_.push tok;
           expr env e2
       | e1, Id name2 ->
           let tok = Ast.tok_of_name name2 in
-          env.stats.G.unresolved_class_access |> Common.push tok;
+          env.stats.G.unresolved_class_access |> Stack_.push tok;
           expr env e1
       | _ ->
           let tok =
             raise Todo (* Meta_ast_php.toks_of_any (Expr2 e1) |> List.hd *)
           in
-          env.stats.G.unresolved_class_access |> Common.push tok;
+          env.stats.G.unresolved_class_access |> Stack_.push tok;
           exprl env [ e1; e2 ])
   (* same, should be executed only for field access *)
   | Obj_get (e1, tok, e2) -> (
@@ -996,13 +1001,13 @@ and expr env x =
                (Id [ (env.cur.self, tokthis) ], tok, Var ("$" ^ s2, tok2)))
       | _, Id name2 ->
           let tok = Ast.tok_of_name name2 in
-          env.stats.G.field_access |> Common.push (tok, false);
+          env.stats.G.field_access |> Stack_.push (tok, false);
           expr env e1
       | _ ->
           let tok =
             raise Todo (*Meta_ast_php.toks_of_any (Expr2 e1) |> List.hd *)
           in
-          env.stats.G.unresolved_class_access |> Common.push tok;
+          env.stats.G.unresolved_class_access |> Stack_.push tok;
           exprl env [ e1; e2 ])
   | New (tok, e, es) ->
       expr env
@@ -1018,7 +1023,7 @@ and expr env x =
           let tok =
             raise Todo (*Meta_ast_php.toks_of_any (Expr2 e1) |> List.hd *)
           in
-          env.stats.G.unresolved_class_access |> Common.push tok;
+          env.stats.G.unresolved_class_access |> Stack_.push tok;
           expr env e2)
   (* boilerplate *)
   | Arrow (e1, _, e2) -> exprl env [ e1; e2 ]
@@ -1028,7 +1033,7 @@ and expr env x =
   | IdSpecial (_, _) -> ()
   | Array_get (e, (_, eopt, _)) ->
       expr env e;
-      Common2.opt (expr env) eopt
+      Option.iter (expr env) eopt
   | Infix (_, e)
   | Postfix (_, e)
   | Unop (_, e) ->
@@ -1072,7 +1077,7 @@ and array_valuel env xs = List.iter (array_value env) xs
 let build ?(verbose = true)
     ?(logfile = Filename.concat (Sys.getcwd ()) "pfff.log")
     ?(readable_file_format = false) ?(only_defs = false)
-    ?(is_skip_error_file = fun _ -> false) ?(class_analysis = false) root files
+    ?(is_skip_error_file = fun _ -> false) ?(class_analysis = false) (root : Fpath.t) files
     =
   let g = G.create () in
   G.create_initial_hierarchy g;
@@ -1109,7 +1114,7 @@ let build ?(verbose = true)
           flush chan);
       pr2_and_log =
         (fun s ->
-          if verbose then pr2 s;
+          if verbose then UCommon.pr2 s;
           output_string chan (s ^ "\n");
           flush chan);
       is_skip_error_file;
@@ -1119,23 +1124,22 @@ let build ?(verbose = true)
        *)
       path =
         (fun file ->
-          if readable_file_format then Common.readable root file else file);
+          if readable_file_format 
+          then !!(Filename_.readable root (Fpath.v file))
+          else file);
     }
   in
 
   (* step1: creating the nodes and 'Has' edges, the defs *)
   env.pr2_and_log "\nstep1: extract defs";
   Profiling.profile_code "Graph_php.step1" (fun () ->
-      files
-      |> Console.progress ~show:verbose (fun k ->
-             List.iter (fun file ->
-                 k ();
-                 let readable = Common.readable root file in
+      files |> List.iter (fun file ->
+                 let readable = !!(Filename_.readable root (Fpath.v file)) in
                  let ast = parse env file in
                  (* will modify env.dupes instead of raise Graph_code.NodeAlreadyPresent *)
-                 extract_defs_uses { env with phase = Defs } ast readable)));
+                 extract_defs_uses { env with phase = Defs } ast readable));
   Profiling.profile_code "Graph_php.step dupes" (fun () ->
-      Common2.hkeys env.dupes
+      Common2_.hkeys env.dupes
       |> List.filter (fun (_, kind) ->
              match kind with
              | E.ClassConstant
@@ -1147,7 +1151,7 @@ let build ?(verbose = true)
              let files = Hashtbl.find_all env.dupes node in
              let ex_file, _ = List.hd files in
              let orig_file =
-               try G.file_of_node node g with
+               try !!(G.file_of_node node g) with
                | Not_found ->
                    failwith
                      (spf "PB with %s, no file found, dupes = %s"
@@ -1230,7 +1234,7 @@ let build ?(verbose = true)
                  let ident = ident_of_name name in
                  let method_str = Ast.str_of_ident ident in
                  let tok = Ast.tok_of_name name in
-                 let candidates = Hashtbl.find_all htoplevels method_str in
+                 let candidates = Hashtbl_.get_stack htoplevels method_str in
                  match candidates with
                  | [] -> (
                      match method_str with
@@ -1249,8 +1253,8 @@ let build ?(verbose = true)
                      xs
                      |> List.iter (fun m ->
                             G.add_edge (cur.node, m) G.Use envold.g);
-                     envold.stats.G.method_calls |> Common.push (tok, true)
-                 | _ -> envold.stats.G.method_calls |> Common.push (tok, false));
+                     envold.stats.G.method_calls |> Stack_.push (tok, true)
+                 | _ -> envold.stats.G.method_calls |> Stack_.push (tok, false));
           !(envold.phase_dispatch)
           |> List.iter (fun (cur, name) ->
                  let kind = E.Method in

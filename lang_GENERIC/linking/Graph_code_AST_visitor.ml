@@ -9,9 +9,6 @@ module L = Graph_code_AST_lookup
 open Graph_code_AST_env
 module T = Resolved_type
 module N = Resolved_name
-module V = Visitor_AST
-
-let logger = Logging.get_logger [ __MODULE__ ]
 
 (* to get even more logging *)
 let debug = false
@@ -26,7 +23,7 @@ let debug = false
 (* This file is used to analyze target code; it should not be used to
  * analyze a pattern, hence the exn below.
  *)
-exception SemgrepConstruct of Parse_info.t
+exception SemgrepConstruct of Tok.t
 
 (*****************************************************************************)
 (* Helpers *)
@@ -40,8 +37,7 @@ let todo_type = None
 let map_of_string _x = ()
 
 let map_of_option = Option.map
-
-let map_of_list = Common.map
+let map_of_list = List.map
 
 (* this used to be called todo() by the boilerplate generator *)
 let nothing _env _x = ()
@@ -86,7 +82,7 @@ let map_module_name env = function
 (* less: could return a type here too? or better in map_expr? *)
 let rec map_name env n : unit =
   if debug then
-    logger#info "map_name: %s" (H.string_of_any (E (N n |> AST_generic.e)));
+    Logs.debug (fun m -> m "map_name: %s" (H.string_of_any (E (N n |> AST_generic.e))));
   H.when_uses_phase env (fun () ->
       (* !!the uses!! *)
       let/ n2 = L.lookup_name_and_set_resolved_if_needed env n in
@@ -105,6 +101,9 @@ let rec map_name env n : unit =
       (* ----------- *)
       let v1 = map_qualified_info env v1 in
       nothing env v1
+  | IdSpecial _ ->
+      (* TODO? *)
+      ()
 
 and map_qualified_info env
     {
@@ -143,11 +142,13 @@ and map_qualifier env = function
 
 and map_id_info env
     {
-      id_resolved = _v_id_resolved;
-      id_type = _v_id_type;
-      id_svalue = _v_id_svalue;
-      id_hidden = _v_id_hidden;
-      id_info_id = _IGNORED;
+      id_resolved = _;
+      id_type = _;
+      id_svalue = _;
+      id_info_id = _;
+      id_resolved_alternatives = _;
+      id_flags = _;
+    
     } =
   (* do we want to recurse ?
      let v_id_svalue = map_of_ref (map_of_option (map_svalue env)) v_id_svalue in
@@ -166,15 +167,24 @@ and map_id_info env
 and map_expr env e : T.t option =
   let t = map_expr_kind env e.e in
   if debug && env.phase = Uses then (
-    logger#info "map_expr: %s" (H.string_of_any (E e));
+    Logs.debug (fun m -> m "map_expr: %s" (H.string_of_any (E e)));
     match t with
-    | None -> logger#info "no type found"
-    | Some t -> logger#info "type = %s" (T.show t));
+    | None -> Logs.debug (fun m -> m "no type found")
+    | Some t -> Logs.debug (fun m -> m "type = %s" (T.show t)));
   t
 
 and map_expr_kind env ekind : T.t option =
   match ekind with
   | RegexpTemplate _ -> failwith "TODO: RegexpTemplate"
+  | LocalImportAll (_, _, _) -> failwith "TODO: LocalImportAll"
+  | N (IdSpecial ((special_id, _), _)) ->
+      (match special_id with
+      | Self
+      | This -> 
+          let* xs = env.class_qualifier in
+          Some (T.TN xs)
+      | _ -> todo_type)
+
   (* TODO: fix Python_to_generic that should generate a special Self *)
   | N (Id (("self", tk), _)) ->
       H.when_uses_phase_or_none env (fun () ->
@@ -197,14 +207,9 @@ and map_expr_kind env ekind : T.t option =
               | Id (_, { id_type = { contents = Some t }; _ }) ->
                   T.of_ast_type env.file_or_package_qualifier t
               | _ -> None))
-  | IdSpecial (spec, tk) -> (
+  | Special (spec, tk) ->
       let _spec = map_special env spec in
-      match spec with
-      | Self
-      | This ->
-          let* xs = env.class_qualifier in
-          Some (T.TN xs)
-      | _ -> todo_type)
+      todo_type
   | DotAccess (v1, v2, v3) ->
       let topt = map_expr env v1
       and _v2 = map_tok env v2
@@ -246,7 +251,7 @@ and map_expr_kind env ekind : T.t option =
            *)
           | T.TN xs when env.lang = Lang.Python -> Some (T.TN xs)
           | _ -> None) |> H.wrap_stat env "Call type"
-  | New (v0, v1, v2) ->
+  | New (v0, v1, _idinfo_, v2) ->
       let _v0 = map_tok env v0 in
       let v1 = map_type_ env v1 in
       let _v2 = map_arguments env v2 in
@@ -334,9 +339,6 @@ and map_expr_kind env ekind : T.t option =
   | DeRef (v1, v2) ->
       let v1 = map_tok env v1 and v2 = map_expr env v2 in
       todo_type
-  | ParenExpr v1 ->
-      let (_, topt, _) = map_bracket env (map_expr env) v1 in
-      topt
   (* Ellipsis are valid constructs in certain language so we can't
    * raise SemgrepConstruct here *)
   | Ellipsis v1 ->
@@ -424,10 +426,6 @@ and map_special env = function
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
-  | This -> ()
-  | Super -> ()
-  | Self -> ()
-  | Parent -> ()
   | NextArrayIndex -> ()
   | Eval -> ()
   | Typeof -> ()
@@ -481,13 +479,13 @@ and map_xml_kind env = function
   (* ----------- *)
   | XmlClassic (v1, v2, v3, v4) ->
       let v1 = map_tok env v1
-      and v2 = map_ident env v2
+      and v2 = map_name env v2
       and v3 = map_tok env v3
       and v4 = map_tok env v4 in
       nothing env (v1, v2, v3, v4)
   | XmlSingleton (v1, v2, v3) ->
       let v1 = map_tok env v1
-      and v2 = map_ident env v2
+      and v2 = map_name env v2
       and v3 = map_tok env v3 in
       nothing env (v1, v2, v3)
   | XmlFragment (v1, v2) ->
@@ -556,16 +554,16 @@ and map_argument env = function
 and map_stmt env
     {
       s = v_s;
-      s_id = _v_s_id;
-      s_use_cache = _v_s_use_cache;
-      s_backrefs = _v_s_backrefs;
-      s_strings = _v_s_strings;
       s_range = _v_s_range;
     } =
   let v_s = map_stmt_kind env v_s in
   nothing env ()
 
+and map_try_else env (_x : try_else)  =
+  failwith "TODO: map_try_else"
+
 and map_stmt_kind env = function
+  | RawStmt _ -> failwith "TODO: RawStmt"
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
@@ -630,11 +628,12 @@ and map_stmt_kind env = function
   | Throw (v1, v2, v3) ->
       let v1 = map_tok env v1 and v2 = map_expr env v2 and v3 = map_sc env v3 in
       nothing env (v1, v2, v3)
-  | Try (v1, v2, v3, v4) ->
+  | Try (v1, v2, v3, v4, v5) ->
       let v1 = map_tok env v1
       and v2 = map_stmt env v2
       and v3 = map_of_list (map_catch env) v3
-      and v4 = map_of_option (map_finally env) v4 in
+      and v4 = map_of_option (map_try_else env) v4
+      and v5 = map_of_option (map_finally env) v5 in
       nothing env (v1, v2, v3, v4)
   | WithUsingResource (v1, v2, v3) ->
       let v1 = map_tok env v1
@@ -773,10 +772,6 @@ and map_for_header env = function
               let v3 = map_expr env v3 in
               nothing env (v1, v2, v3)
         | FEllipsis v -> map_for_header env (ForEllipsis v))
-  | ForIn (v1, v2) ->
-      let v1 = map_of_list (map_for_var_or_expr env) v1
-      and v2 = map_of_list (map_expr env) v2 in
-      nothing env (v1, v2)
   | ForEllipsis v1 ->
       let v1 = map_tok env v1 in
       nothing env v1
@@ -830,7 +825,7 @@ and map_pattern env = function
   | PatKeyVal (v1, v2) ->
       let v1 = map_pattern env v1 and v2 = map_pattern env v2 in
       nothing env (v1, v2)
-  | PatUnderscore v1 ->
+  | PatWildcard v1 ->
       let v1 = map_tok env v1 in
       nothing env v1
   | PatDisj (v1, v2) ->
@@ -1011,8 +1006,8 @@ and map_definition env (ent, def) =
               env.g |> G.add_edge (env.current_parent, node) G.Has);
             env.hooks.on_def_node node (ent, def);
             let/ ty = H.type_of_definition_opt env dotted_ident (ent, def) in
-            logger#info "adding type for %s = %s" (G.string_of_node node)
-              (T.show ty);
+            Logs.info (fun m -> m "adding type for %s = %s" (G.string_of_node node)
+              (T.show ty));
             Hashtbl.add env.types node ty);
 
         let env =
@@ -1102,7 +1097,7 @@ and map_definition_kind env = function
       let v1 = map_macro_definition env v1 in
       nothing env v1
   | Signature v1 ->
-      let v1 = map_type_ env v1 in
+      let v1 = map_signature_definition env v1 in
       nothing env v1
   | UseOuterDecl v1 ->
       let v1 = map_tok env v1 in
@@ -1110,6 +1105,9 @@ and map_definition_kind env = function
   | OtherDef (v1, v2) ->
       let v1 = map_todo_kind env v1 and v2 = map_of_list (map_any env) v2 in
       nothing env (v1, v2)
+
+and map_signature_definition _env (_v : signature_definition) =
+  failwith "TODO: map_signature_definition"
 
 and map_type_parameter env = function
   (* ----------- *)
@@ -1145,7 +1143,8 @@ and map_type_parameter_classic env
   let v_tp_id = map_ident env v_tp_id in
   nothing env ()
 
-and map_type_parameters env v = map_of_list (map_type_parameter env) v
+and map_type_parameters env (v : type_parameters option) = 
+  map_of_option (map_bracket env (map_of_list (map_type_parameter env))) v
 
 and map_variance env _ = ()
 
@@ -1232,7 +1231,7 @@ and map_function_body env = function
 (* ------------------------------------------------------------------------- *)
 (* Variable definition *)
 (* ------------------------------------------------------------------------- *)
-and map_variable_definition env { vinit = v_vinit; vtype = v_vtype } =
+and map_variable_definition env { vinit = v_vinit; vtype = v_vtype; vtok = _ } =
   (* ----------- *)
   (* Boilerplate *)
   (* ----------- *)
@@ -1399,7 +1398,7 @@ and map_directive_kind env = function
   | ImportFrom (v1, v2, v3) ->
       let v1 = map_tok env v1
       and v2 = map_module_name env v2
-      and v3 = map_of_list (map_alias env) v3 in
+      and v3 = map_of_list (map_import_from_kind env) v3 in
       nothing env (v1, v2, v3)
   | ImportAs (v1, v2, v3) ->
       let v1 = map_tok env v1
@@ -1428,6 +1427,9 @@ and map_ident_and_id_info env (v1, v2) =
   let v1 = map_ident env v1 and v2 = map_id_info env v2 in
   (v1, v2)
 
+and map_import_from_kind _env (_x : import_from_kind) =
+  failwith "TODO: map_import_from_kind"
+
 and map_alias env (v1, v2) =
   let v1 = map_ident env v1 in
   let v2 = map_of_option (map_ident_and_id_info env) v2 in
@@ -1447,7 +1449,7 @@ and map_program env v = map_of_list (map_item env) v
 
 (* Partials appear only in Semgrep patterns, not in target files *)
 and map_partial env partial =
-  raise (SemgrepConstruct (V.first_info_of_any (Partial partial)))
+  raise (SemgrepConstruct (AST_generic_helpers.first_info_of_any (Partial partial)))
 
 and map_any env = function
   (* TODO *)

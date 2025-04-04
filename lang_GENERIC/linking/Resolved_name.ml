@@ -6,8 +6,6 @@
 open Common
 module AST = AST_generic
 
-let logger = Logging.get_logger [ __MODULE__ ]
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -46,14 +44,14 @@ type t = AST_generic.dotted_ident
 
 (* When we create a node, we need to qualify it fully, because each
  * node must be unique (no duplicate nodes) *)
-let to_entname xs = xs |> List.map fst |> Common.join "."
+let to_entname xs = xs |> List.map fst |> String.concat "."
 
 (* When we lookup things, we actually care only about the last part
  * of the name as we gradually go down in the graph.
  *)
-let dotted_ident_of_entname str = Common.split "\\." str
+let dotted_ident_of_entname str = String_.split ~sep:"\\." str
 
-let dotted_ident_of_dir str = Common.split "/" str
+let dotted_ident_of_dir str = String_.split ~sep:"/" str
 
 (* see also AST_generic_helpers.name_of_ids *)
 
@@ -70,17 +68,19 @@ let of_ast_name = function
       (* This can actually introduces some regressions, take care! *)
       | Some (AST.GlobalName (xs, []), _sid)
       ->
-          Some (xs |> Common.map (fun x -> x, tok))
+          Some (xs |> List.map (fun x -> x, tok))
       | Some _ -> 
-            logger#info "of_ast_name: %s, no resolvable name (Some _)" s; 
+            Logs.info (fun m -> m "of_ast_name: %s, no resolvable name (Some _)" s); 
             None
       (* this can now be set in L.lookup_name_and_set_resolved_if_needed *)
       | None -> 
-            logger#info "of_ast_name: %s, no resolvable name (None)" s;
+            Logs.info (fun m -> m "of_ast_name: %s, no resolvable name (None)" s);
             None)
   (* TODO *)
   | AST.IdQualified _ -> 
-      logger#info "of_ast_name: No resolvable name found (TODO IdQualified)";
+      Logs.info (fun m -> m "of_ast_name: No resolvable name found (TODO IdQualified)");
+      None
+  | AST.IdSpecial _ ->
       None
 
 (* todo: generate an Id with id_resolved or directly an IdQualified?

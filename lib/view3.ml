@@ -178,12 +178,12 @@ let mk_gui w =
 
         fc#add_item "_Order" ~callback:(fun () ->
           let dm = w.m in
-          Dependencies_matrix_build.info_orders dm;
+          UCommon.pr (Dependencies_matrix_build.info_orders dm);
         ) |> ignore;
         fc#add_item "_PrintTree" ~callback:(fun () ->
           let dm = w.m in
           dm.DM.i_to_name |> Array.iter (fun node ->
-            pr (Graph_code.string_of_node node)
+            UCommon.pr (Graph_code.string_of_node node)
           );
         ) |> ignore;
       );
@@ -206,7 +206,7 @@ let mk_gui w =
 
       tb#insert_widget (G.mk (GButton.button ~stock:`GO_BACK) (fun b -> 
         b#connect#clicked ~callback:(fun () -> 
-          w.path <- Common2.list_init w.path;
+          w.path <- Common2_.list_init w.path;
           View_matrix.recompute_matrix w;
         ) |> ignore;
       ));
@@ -259,9 +259,9 @@ let mk_gui w =
   (*-------------------------------------------------------------------*)
 
   GtkSignal.user_handler := (fun exn -> 
-    pr2 "fucking callback";
+    UCommon.pr2 "fucking callback";
     let s = Printexc.get_backtrace () in
-    pr2 s;
+    UCommon.pr2 s;
     let pb = "pb: " ^ Common.exn_to_s exn in
     G.dialog_text ~text:pb ~title:"pb";
     raise exn

@@ -13,11 +13,11 @@
  * license.txt for more details.
  *)
 open Common
+open Fpath_.Operators
 module E = Entity_code
 module G = Graph_code
 open Ast_java
 module Ast = Ast_java
-module PI = Parse_info
 
 (*****************************************************************************)
 (* Prelude *)
@@ -100,22 +100,22 @@ and phase = Defs | Inheritance | Uses
 (* Helpers *)
 (*****************************************************************************)
 
-let parse ~show_parse_error file =
-  try Parse_java.parse_program file with
+let parse ~show_parse_error (file : string) =
+  try Parse_java.parse_program (Fpath.v file) with
   | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
   | exn ->
       let e = Exception.catch exn in
       if show_parse_error then
-        pr2_once
+        UCommon.pr2_once
           (spf "PARSE ERROR with %s, exn = %s" file (Exception.to_string e));
       []
 
-let str_of_qualified_ident xs = xs |> List.map Ast.unwrap |> Common.join "."
+let str_of_qualified_ident xs = xs |> List.map Ast.unwrap |> String.concat "."
 
 let _str_of_name xs =
   xs
   |> List.map (fun (_tyarg_todo, ident) -> Ast.unwrap ident)
-  |> Common.join "."
+  |> String.concat "."
 
 let unbracket (_, x, _) = x
 
@@ -128,11 +128,13 @@ let _long_ident_of_name xs = List.map snd xs
 (* TODO *)
 let long_ident_of_class_type xs = List.map fst xs
 
-let nodeinfo ident =
+let nodeinfo (ident : Ast.ident) : G.nodeinfo =
   {
-    G.pos = Parse_info.unsafe_token_location_of_info (Ast.info_of_ident ident);
+    G.pos = Tok.unsafe_loc_of_tok (snd ident);
     props = [];
     typ = None;
+    scip_symbol = None;
+    range = None;
   }
 
 let looks_like_class_name s = s =~ "[A-Z]"
@@ -175,7 +177,7 @@ let add_use_edge env (name, kind) =
   let dst = (name, kind) in
   match () with
   | _ when not (G.has_node src env.g) ->
-      pr2
+      UCommon.pr2
         (spf "LOOKUP SRC FAIL %s --> %s, src does not exist???"
            (G.string_of_node src) (G.string_of_node dst))
   | _ when G.has_node dst env.g -> G.add_edge (src, dst) G.Use env.g
@@ -188,19 +190,19 @@ let add_use_edge env (name, kind) =
           match kind_original with
           | E.Package ->
               let fake_package =
-                Common.split "\\." name |> List.map (fun s -> s ^ "2")
+                String_.split ~sep:"\\." name |> List.map (fun s -> s ^ "2")
               in
-              let dst = (Common.join "." fake_package, kind_original) in
+              let dst = (String.concat "." fake_package, kind_original) in
               if not (G.has_node dst env.g) then (
                 create_intermediate_packages_if_not_present env.g parent_target
                   (fake_package |> List.map (fun s -> (s, ())));
-                pr2
+                UCommon.pr2
                   (spf "PB: lookup fail on %s (in %s)" (G.string_of_node dst)
                      (G.string_of_node src)));
               env.g |> G.add_edge (src, dst) G.Use;
               ()
           | _ ->
-              pr2
+              UCommon.pr2
                 (spf "PB: lookup fail on %s (in %s)" (G.string_of_node dst)
                    (G.string_of_node src));
               G.add_node dst env.g;
@@ -248,7 +250,7 @@ let (lookup : env -> Ast.qualified_ident -> Graph_code.node option) =
   let candidates = with_full_qualifier env xs in
   (* pr2_gen candidates; *)
   candidates
-  |> Common.find_some_opt (fun full_qualifier ->
+  |> List_.find_some_opt (fun full_qualifier ->
          lookup_fully_qualified_memoized env full_qualifier)
 [@@profiling]
 
@@ -262,10 +264,10 @@ let rec import_of_inherited_classes env n =
    *)
   let parents_inheritance = G.succ n G.Use env.g in
   parents_inheritance
-  |> Common.map_filter (fun (str, kind) ->
+  |> List.filter_map (fun (str, kind) ->
          match kind with
          | E.Class ->
-             let xs = Common.split "\\." str @ [ "*" ] in
+             let xs = String_.split ~sep:"\\." str @ [ "*" ] in
              let res = import_of_inherited_classes env (str, kind) in
              Some (xs :: res)
          | _ -> None)
@@ -302,7 +304,7 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
             [ List.map Ast.unwrap long_ident @ [ "*" ] ]
         | _ -> [])
         @ (ast
-          |> Common.map_filter (function
+          |> List.filter_map (function
                | DirectiveStmt (Import (_is_static, _import)) ->
                    (* List.map Ast.unwrap qualified_ident *) raise Todo
                | _ -> None))
@@ -314,7 +316,7 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
           ];
       imported_qualified =
         ast
-        |> Common.map_filter (function
+        |> List.filter_map (function
              | DirectiveStmt (Import (_is_static, _import)) -> raise Todo
              | _ ->
                  None
@@ -333,7 +335,7 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
        create_intermediate_packages_if_not_present g G.root long_ident
    (* have None usually for scripts, tests, or entry points *)
    | _ ->
-       let dir = Common2.dirname readable in
+       let dir = Filename.dirname readable in
        G.create_intermediate_directories_if_not_present g dir;
        g |> G.add_node (readable, E.File);
        g |> G.add_edge ((dir, E.Dir), (readable, E.File)) G.Has);
@@ -364,7 +366,7 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
                   *)
                  ()
              | None ->
-                 pr2_once
+                 UCommon.pr2_once
                    (spf "PB: wrong import: %s"
                       (str_of_qualified_ident qualified_ident_bis)))
          | _ -> ());
@@ -385,6 +387,7 @@ and decl env = function
   | Field def, _ -> field_decl env def
   | Enum def, _ -> enum_decl env def
   | DeclEllipsis _, _ -> ()
+  | DeclMetavarEllipsis _, _ -> ()
   | Init (_is_static, st), n ->
       let name = spf "__init__%d" n in
       let full_ident = env.current_qualifier @ [ (name, fakeInfo name) ] in
@@ -398,7 +401,7 @@ and decl env = function
   | EmptyDecl _, _ -> ()
   | AnnotationTypeElementTodo _, _ -> raise Todo
 
-and decls env xs = List.iter (decl env) (Common.index_list_1 xs)
+and decls env xs = List.iter (decl env) (List_.index_list_1 xs)
 
 and class_decl env def =
   let full_ident = env.current_qualifier @ [ def.cl_name ] in
@@ -423,7 +426,7 @@ and class_decl env def =
              | TParam ((str, _tok), _constraints) -> str);
     }
   in
-  let parents = Common2.option_to_list def.cl_extends @ def.cl_impls in
+  let parents = Option.to_list def.cl_extends @ def.cl_impls in
   List.iter (typ env) parents;
 
   let imports =
@@ -470,7 +473,7 @@ and method_decl env def =
       current_qualifier = full_ident;
       params_or_locals =
         (def.m_formals
-        |> Common.map_filter (function
+        |> List.filter_map (function
              | ParamClassic p
              | ParamReceiver p
              | ParamSpread (_, p) ->
@@ -609,7 +612,7 @@ and stmt env = function
   | Break (_, _idopt)
   | Continue (_, _idopt) ->
       ()
-  | Return (_, eopt) -> exprs env (Common2.option_to_list eopt)
+  | Return (_, eopt) -> exprs env (Option.to_list eopt)
   | Sync (_, e, st) ->
       expr env e;
       stmt env st
@@ -618,9 +621,9 @@ and stmt env = function
       catches env xs;
       stopt |> Option.iter (fun (_, st) -> stmt env st)
   | Throw (_, e) -> expr env e
-  | Assert (_, e, eopt) -> exprs env (e :: Common2.option_to_list eopt)
+  | Assert (_, e, eopt) -> exprs env (e :: Option.to_list eopt)
   (* The modification of env.params_locals is done in decls() *)
-  | LocalVarList xs -> List.iter (field env) xs
+  | LocalVarList (xs, _) -> List.iter (field env) xs
   | DeclStmt x -> decl env (x, 0)
   | DirectiveStmt _ -> raise Todo
 
@@ -631,7 +634,7 @@ and stmts env xs =
         stmt env x;
         let env =
           match x with
-          | LocalVarList flds ->
+          | LocalVarList (flds, _sc) ->
               List.fold_right
                 (fun fld env ->
                   {
@@ -688,8 +691,8 @@ and expr env = function
               | None ->
                   (match n with
                    | [] ->
-                       pr2 "Name is empty??";
-                       pr2_gen (env.current, n);
+                       UCommon.pr2 "Name is empty??";
+                       UCommon.pr2_gen (env.current, n);
                        raise Impossible
                    | (_, (s,_))::_ when List.mem_assoc s env.imported_qualified ->
                        let (_is_static, full_ident) =
@@ -698,7 +701,7 @@ and expr env = function
                        add_use_edge env (str, E.Package)
 
                    | [_x] when looks_like_enum_constant str ->
-                       pr2 ("PB: " ^ Common.dump n);
+                       UCommon.pr2 ("PB: " ^ Common.dump n);
                    | [_x] when looks_like_class_name str ->
                        add_use_edge env (str, E.Package)
                    | [_x] ->
@@ -723,7 +726,7 @@ and expr env = function
       | Some xs ->
           (* less: quite similar to class_decl, factorize code? *)
           let classname, info = classname_and_info_of_typ t in
-          let charpos = PI.pos_of_info info in
+          let charpos = Tok.bytepos_of_tok info in
           let anon_class = spf "__anon__%s__%d" classname charpos in
           let cdecl =
             {
@@ -830,7 +833,7 @@ and typ env = function
                 | [ _x ] ->
                     if looks_like_class_name str then
                       add_use_edge env (str, E.Package)
-                    else pr2 ("PB: " ^ Dumper.dump reft)
+                    else UCommon.pr2 ("PB: " ^ Dumper.dump reft)
                 | _x :: _y :: _xs ->
                     (* unknown package probably *)
                     add_use_edge env (str, E.Package))))
@@ -851,40 +854,31 @@ and field env f =
 (* Main entry point *)
 (*****************************************************************************)
 
-let build ?(verbose = true) ?(only_defs = false) root files =
+let build ?(verbose = true) ?(only_defs = false) (root : Fpath.t) files =
   let g = G.create () in
   G.create_initial_hierarchy g;
 
-  let lookup_fails = Common2.hash_with_default (fun () -> 0) in
+  let lookup_fails = Common2_.hash_with_default (fun () -> 0) in
 
   (* step1: creating the nodes and 'Has' edges, the defs *)
-  if verbose then pr2 "\nstep1: extract defs";
-  files
-  |> Console.progress ~show:verbose (fun k ->
-         List.iter (fun file ->
-             k ();
-             let readable = Common.readable ~root file in
+  if verbose then UCommon.pr2 "\nstep1: extract defs";
+  files |> List.iter (fun file ->
+             let readable = !!(Filename_.readable ~root (Fpath.v file)) in
              let ast = parse ~show_parse_error:true file in
-             extract_defs_uses ~phase:Defs ~g ~ast ~readable ~lookup_fails));
+             extract_defs_uses ~phase:Defs ~g ~ast ~readable ~lookup_fails);
   if not only_defs then (
     (* step2: creating the 'Use' edges just for inheritance *)
-    if verbose then pr2 "\nstep2: extract inheritance information";
-    files
-    |> Console.progress ~show:verbose (fun k ->
-           List.iter (fun file ->
-               k ();
-               let readable = Common.readable ~root file in
+    if verbose then UCommon.pr2 "\nstep2: extract inheritance information";
+    files |> List.iter (fun file ->
+               let readable = !!(Filename_.readable ~root (Fpath.v file)) in
                let ast = parse ~show_parse_error:false file in
                extract_defs_uses ~phase:Inheritance ~g ~ast ~readable
-                 ~lookup_fails));
+                 ~lookup_fails);
 
     (* step3: creating the 'Use' edges that can rely on recursive inheritance *)
-    if verbose then pr2 "\nstep3: extract uses";
-    files
-    |> Console.progress ~show:verbose (fun k ->
-           List.iter (fun file ->
-               k ();
-               let readable = Common.readable ~root file in
+    if verbose then UCommon.pr2 "\nstep3: extract uses";
+    files |> List.iter (fun file ->
+               let readable = !!(Filename_.readable ~root (Fpath.v file)) in
                let ast = parse ~show_parse_error:false file in
-               extract_defs_uses ~phase:Uses ~g ~ast ~readable ~lookup_fails)));
+               extract_defs_uses ~phase:Uses ~g ~ast ~readable ~lookup_fails));
   g
