@@ -1427,14 +1427,18 @@ and map_ident_and_id_info env (v1, v2) =
   let v1 = map_ident env v1 and v2 = map_id_info env v2 in
   (v1, v2)
 
-and map_import_from_kind _env (_x : import_from_kind) =
-  failwith "TODO: map_import_from_kind"
+and map_import_from_kind env (x : import_from_kind) =
+  match x with
+  | Direct v1 ->
+      let v1 = map_alias env v1 in
+      nothing env v1
+  | Aliased (v1, v2) ->
+      let v1 = map_ident env v1 in
+      let v2 = map_alias env v2 in
+      nothing env (v1, v2)
 
-and map_alias env (v1, v2) =
-  let v1 = map_ident env v1 in
-  let v2 = map_of_option (map_ident_and_id_info env) v2 in
-  (v1, v2)
-
+and map_alias env v1 =
+  map_ident_and_id_info env v1
 
 (*****************************************************************************)
 (* Toplevel *)
