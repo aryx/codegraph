@@ -1,5 +1,5 @@
 val build :
-  ?verbose:bool -> Common.dirname -> Common.filename list -> Graph_code.t
+  Fpath.t (* root *) -> Common2_.filename list -> Graph_code.t
 
 (* if want prolog facts generation *)
 val hook_use_edge :
@@ -7,7 +7,7 @@ val hook_use_edge :
   bool (* in_assign *) ->
   Graph_code.node * Graph_code.node ->
   Graph_code.t ->
-  Parse_info.token_location ->
+  Tok.location ->
   unit)
   ref
 
