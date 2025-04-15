@@ -15,7 +15,7 @@
     gitignore
 
     ; now in codemap
-    pfff-h_files-format
+    files-format
     database_code ; for graph_code_database
 
     codegraph ; lib/

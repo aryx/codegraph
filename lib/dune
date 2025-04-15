@@ -9,7 +9,7 @@
    commons
    lib_parsing
    graph_code
-   pfff-h_visualization
+   visualization
    gui
  )
  (preprocess (pps ppx_deriving.show profiling.ppx))
