@@ -1,6 +1,6 @@
 (* Yoann Padioleau
  *
- * Copyright (C) 2022 r2c, All rights reserved.
+ * Copyright (C) 2022, 2025 Semgrep Inc., All rights reserved.
  *
  *)
 open Graph_code_AST_env
@@ -11,6 +11,7 @@ module T = Resolved_type
 module N = Resolved_name
 module AST = AST_generic
 module Stat = Stat_code
+module Log = Log_codegraph_generic.Log
 
 (*****************************************************************************)
 (* Prelude *)
@@ -38,7 +39,7 @@ module Stat = Stat_code
 
 let lookup_resolved_name (env : env) (xs : N.t) : G.node option
     =
-  Logs.info (fun m -> m "looking up: %s" (xs |> List.map fst |> String.concat "."));
+  Log.debug (fun m -> m "looking up: %s" (xs |> List.map fst |> String.concat "."));
   let g = env.g in
   let rec aux current xs =
     match xs with
@@ -60,13 +61,13 @@ let lookup_resolved_name (env : env) (xs : N.t) : G.node option
             let cur_str = G.string_of_node current in
             let lookup_fail = fst current ^ "." ^ str in
             Stat.add_failure env.stats ("lookup_resolved:" ^  lookup_fail);
-            Logs.err (fun m -> m "no candidate found for %s at node %s, children = [%s]"
+            Log.err (fun m -> m "no candidate found for %s at node %s, children = [%s]"
               str cur_str
               (children |> List.map G.string_of_node |> String.concat ","));
             None
         | [ y ] -> aux y xs
         | ys ->
-            Logs.err (fun m -> m "too many candidates for %s, list = [%s]" str
+            Log.err (fun m -> m "too many candidates for %s, list = [%s]" str
               (ys |> List.map G.string_of_node |> String.concat ","));
             None)
   in
@@ -110,12 +111,12 @@ let lookup_name_and_set_resolved_if_needed (env: env) (name: AST.name) : G.node 
   
 
 let lookup_type_of_node env node =
-  Logs.info (fun m -> m "lookup type for node %s" (G.string_of_node node));
+  Log.debug (fun m -> m "lookup type for node %s" (G.string_of_node node));
   Hashtbl.find_opt env.types node |> H.wrap_stat env "lookup_type"
 
 let lookup_resolved_type_of_resolved_name env rn =
-  (Logs.info (fun m -> m "looking up type for: %s" (N.to_entname rn));
+  (Log.debug (fun m -> m "looking up type for: %s" (N.to_entname rn));
   let* n = lookup_resolved_name env rn in
   let* t = lookup_type_of_node env n in
-  Logs.info (fun m -> m "found type for %s = %s" (G.string_of_node n) (T.show t));
+  Log.debug (fun m -> m "found type for %s = %s" (G.string_of_node n) (T.show t));
   Some t) |> H.wrap_stat env "lookup_resolved_type_of_resolved_name"

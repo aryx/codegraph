@@ -1,10 +1,11 @@
 (* Yoann Padioleau
  *
- * Copyright (C) 2022 r2c, All rights reserved.
+ * Copyright (C) 2022, 2025 Semgrep Inc., All rights reserved.
  *
  *)
 open Common
 module AST = AST_generic
+module Log = Log_codegraph_generic.Log
 
 (*****************************************************************************)
 (* Prelude *)
@@ -70,15 +71,15 @@ let of_ast_name = function
       ->
           Some (xs |> List.map (fun x -> x, tok))
       | Some _ -> 
-            Logs.info (fun m -> m "of_ast_name: %s, no resolvable name (Some _)" s); 
+            Log.debug (fun m -> m "of_ast_name: %s, no resolvable name (Some _)" s); 
             None
       (* this can now be set in L.lookup_name_and_set_resolved_if_needed *)
       | None -> 
-            Logs.info (fun m -> m "of_ast_name: %s, no resolvable name (None)" s);
+            Log.debug (fun m -> m "of_ast_name: %s, no resolvable name (None)" s);
             None)
   (* TODO *)
   | AST.IdQualified _ -> 
-      Logs.info (fun m -> m "of_ast_name: No resolvable name found (TODO IdQualified)");
+      Log.debug (fun m -> m "of_ast_name: No resolvable name found (TODO IdQualified)");
       None
   | AST.IdSpecial _ ->
       None

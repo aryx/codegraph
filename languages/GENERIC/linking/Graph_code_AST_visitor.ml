@@ -1,6 +1,6 @@
 (* Yoann Padioleau
  *
- * Copyright (C) 2022 r2c
+ * Copyright (C) 2022, 2025 Semgrep Inc.
  *
  *)
 open AST_generic
@@ -9,6 +9,8 @@ module L = Graph_code_AST_lookup
 open Graph_code_AST_env
 module T = Resolved_type
 module N = Resolved_name
+
+module Log = Log_codegraph_generic.Log
 
 (* to get even more logging *)
 let debug = false
@@ -82,7 +84,7 @@ let map_module_name env = function
 (* less: could return a type here too? or better in map_expr? *)
 let rec map_name env n : unit =
   if debug then
-    Logs.debug (fun m -> m "map_name: %s" (H.string_of_any (E (N n |> AST_generic.e))));
+    Log.debug (fun m -> m "map_name: %s" (H.string_of_any (E (N n |> AST_generic.e))));
   H.when_uses_phase env (fun () ->
       (* !!the uses!! *)
       let/ n2 = L.lookup_name_and_set_resolved_if_needed env n in
@@ -167,10 +169,10 @@ and map_id_info env
 and map_expr env e : T.t option =
   let t = map_expr_kind env e.e in
   if debug && env.phase = Uses then (
-    Logs.debug (fun m -> m "map_expr: %s" (H.string_of_any (E e)));
+    Log.debug (fun m -> m "map_expr: %s" (H.string_of_any (E e)));
     match t with
-    | None -> Logs.debug (fun m -> m "no type found")
-    | Some t -> Logs.debug (fun m -> m "type = %s" (T.show t)));
+    | None -> Log.debug (fun m -> m "no type found")
+    | Some t -> Log.debug (fun m -> m "type = %s" (T.show t)));
   t
 
 and map_expr_kind env ekind : T.t option =
@@ -1006,7 +1008,7 @@ and map_definition env (ent, def) =
               env.g |> G.add_edge (env.current_parent, node) G.Has);
             env.hooks.on_def_node node (ent, def);
             let/ ty = H.type_of_definition_opt env dotted_ident (ent, def) in
-            Logs.info (fun m -> m "adding type for %s = %s" (G.string_of_node node)
+            Log.info (fun m -> m "adding type for %s = %s" (G.string_of_node node)
               (T.show ty));
             Hashtbl.add env.types node ty);
 

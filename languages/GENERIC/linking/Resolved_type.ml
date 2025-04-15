@@ -7,6 +7,7 @@ open AST_generic
 module AST = AST_generic
 module H = AST_generic_helpers
 module N = Resolved_name
+module Log = Log_codegraph_generic.Log
 
 (*****************************************************************************)
 (* Prelude *)
@@ -128,7 +129,7 @@ let of_ast_type file_or_package_qualifier ty =
              | None
              | Some (Global, _) ->
                 let rn = file_or_package_qualifier @ [ id ] in
-                Logs.info (fun m -> m "of_ast_type: trying to qualify %s with %s"
+                Log.debug (fun m -> m "of_ast_type: trying to qualify %s with %s"
                      (fst id) (N.to_entname rn));
 
                 (* let's hope, we have no way to call lookup_resolved_name()

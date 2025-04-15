@@ -1,6 +1,6 @@
 (* Yoann Padioleau
  *
- * Copyright (C) 2022 r2c
+ * Copyright (C) 2022, 2025 Semgrep Inc.
  *
  *)
 open Common
@@ -12,6 +12,7 @@ module AST = AST_generic
 module T = Resolved_type
 module N = Resolved_name
 module Stat = Stat_code
+module Log = Log_codegraph_generic.Log
 
 (*****************************************************************************)
 (* Debugging helpers *)
@@ -85,7 +86,7 @@ let entity_kind_of_definition _env (ent, defkind) =
       then E.Constant
       else E.Global
   | _ ->
-      Logs.err (fun m -> m "entity kind not handled yet: %s"
+      Log.err (fun m -> m "entity kind not handled yet: %s"
         (string_of_any (Dk defkind)));
       E.Other "Todo"
 
@@ -156,10 +157,10 @@ let (hook_add_use_edge : (G.node -> G.node -> Tok.t -> unit) ref) =
 let add_use_edge env (name, kind) tok =
   let src = env.current_parent in
   let dst = (name, kind) in
-  Logs.info (fun m -> m "trying %s --> %s" (G.string_of_node src) (G.string_of_node dst));
+  Log.debug (fun m -> m "trying %s --> %s" (G.string_of_node src) (G.string_of_node dst));
   match () with
   | _ when not (G.has_node src env.g) ->
-      Logs.err (fun m -> m "LOOKUP SRC FAIL %s --> %s, src does not exist???"
+      Log.err (fun m -> m "LOOKUP SRC FAIL %s --> %s, src does not exist???"
         (G.string_of_node src) (G.string_of_node dst))
   | _ when G.has_node dst env.g -> 
       G.add_edge (src, dst) G.Use env.g;
@@ -180,13 +181,12 @@ let add_use_edge env (name, kind) tok =
                 env.g parent_target
                 (fake_package |> List.map (fun s -> s,()));
            *)
-           Logs.err (fun m -> m "PB: lookup fail on %s (in %s)"
+           Log.err (fun m -> m "PB: lookup fail on %s (in %s)"
              (G.string_of_node dst) (G.string_of_node src));
          env.g |> G.add_edge (src, dst) G.Use;
          !hook_add_use_edge src dst tok;
      | _ ->
-         UCommon.pr2
-           (spf "PB: lookup fail on %s (in %s)" (G.string_of_node dst)
+         Log.err (fun m -> m  "PB: lookup fail on %s (in %s)" (G.string_of_node dst)
               (G.string_of_node src));
          G.add_node dst env.g;
          env.g |> G.add_edge (parent_target, dst) G.Has;
