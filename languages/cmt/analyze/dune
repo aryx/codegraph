@@ -1,0 +1,17 @@
+(library
+ (public_name pfff-lang_cmt-analyze)
+ (name pfff_lang_cmt_analyze)
+ (wrapped false)
+ (libraries
+   ounit2
+   compiler-libs
+
+   commons
+   lib_parsing
+   graph_code 
+   parser_ocaml.ast
+   
+   pfff-lang_cmt
+   pfff-lang_ml-analyze
+)
+)

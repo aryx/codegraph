@@ -1,0 +1,10 @@
+(library
+ (public_name pfff-lang_cmt)
+ (name pfff_lang_cmt)
+ (wrapped false)
+ (libraries
+   commons
+
+   compiler-libs
+ )
+)
