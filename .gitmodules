@@ -1,5 +1,5 @@
 [submodule "pfff-bytecode"]
-	path = lang_SPECIFIC/pfff-bytecode
+	path = languages/pfff-bytecode
 	url = https://github.com/aryx/pfff-bytecode.git
 [submodule "lang_GENERIC/semgrep"]
 	path = lang_GENERIC/semgrep
