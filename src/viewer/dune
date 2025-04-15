@@ -1,5 +1,5 @@
 (library
- (name codegraph)
+ (name viewer)
  (wrapped false)
  (libraries
    lablgtk2

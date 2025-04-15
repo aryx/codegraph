@@ -1,65 +1,13 @@
 (executables
- (names main_codegraph main_codegraph_build)
+ (names Main)
  (libraries 
-    str bigarray
-    ocamlgraph
-
-    compiler-libs ;; for lang_cmt 
-    compiler-libs.common
-
-    commons profiling
-    commons2_
-    lib_parsing
     graph_code
-    paths
-    gitignore
 
     ; now in codemap
     files-format
-    database_code ; for graph_code_database
 
-    codegraph ; lib/
-
-    ; for find_source, the find_source_files_or...
-    parser_php.ast
-    parser_cpp.ast
-    ;TODO parser_c.ast
-    parser_lisp.ast
-
-    ; for codegraph_build, in pfff (hopefully in ~/.opam)
-    pfff-lang_java-analyze ; Builtins_java
-    pfff-lang_js-analyze ; Stdlib_js
-    pfff-lang_ml-analyze
-    parser_cpp.menhir ; Parse_cpp.init_defs
-    ;TODO pfff-lang_c-analyze
-    pfff_lang_php_analyze
-    pfff-lang_lisp-analyze
-
-    ;pfff-lang_python
-    ;pfff-lang_js pfff-lang_js-analyze
-    ;pfff-lang_cpp 
-    ;pfff-lang_c pfff-lang_c-analyze
-    ;pfff-lang_ml
-    ;pfff-lang_java pfff-lang_java-analyze
-    ;pfff-lang_php pfff-lang_php-analyze pfff_lang_php_analyze2
-    ;pfff-lang_lisp pfff-lang_lisp-analyze
-
-    ; in codemap now
-    layer_code
-
-    ; in lang_GENERIC/
-    pfff-lang_GENERIC_finding
-    pfff-lang_GENERIC_parsing
-
-    ; in semgrep now (and hopefully installed in ~/.opam via make install in semgrep)
-    pfff-lang_GENERIC-naming
-
-    ; in codegraph now!
-    pfff-lang_GENERIC_linking
-
-    ; in lang_SPECIFIC/pfff-bytecode
-    ;TODO pfff-lang_cmt pfff-lang_cmt-analyze
-
+    ; local deps
+    viewer
  )
  ; for ocamldebug
  (modes native byte)
@@ -67,10 +15,8 @@
  (preprocess (pps ppx_deriving.show profiling.ppx))
 )
 
-
 (install
  (package codegraph)
  (section bin)
- (files (main_codegraph.exe as codegraph) 
-        (main_codegraph_build.exe as codegraph_build))
+ (files (Main.exe as codegraph))
 )

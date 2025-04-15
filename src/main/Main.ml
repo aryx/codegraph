@@ -374,7 +374,7 @@ let extra_actions () = [
 (*****************************************************************************)
 
 let all_actions () = 
-  Layer_graph_code.actions() @
+  (* Layer_graph_code.actions() @ *)
   extra_actions () @
   (*  Test_program_lang.actions() @ *)
   []
