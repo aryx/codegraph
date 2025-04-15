@@ -17,10 +17,7 @@ open Common
 module G = Gui
 module K = GdkKeysyms
 
-open Model3
-module Model = Model3
-module Controller = Controller3
-module View_overlays = View_overlays3
+open Model
 
 (*****************************************************************************)
 (* Prelude *)

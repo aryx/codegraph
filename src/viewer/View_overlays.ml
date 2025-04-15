@@ -17,9 +17,9 @@ open Common
 open Common2_.ArithFloatInfix
 
 open Figures
-open Model3
-module M = Model3
-module Ctl = Controller3
+open Model
+module M = Model
+module Ctl = Controller
 
 module G = Graph_code
 module DM = Dependencies_matrix_code

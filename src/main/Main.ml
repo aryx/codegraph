@@ -7,8 +7,6 @@ open Fpath_.Operators
 module GC = Graph_code
 module DM = Dependencies_matrix_code
 module DMBuild = Dependencies_matrix_build
-module Model = Model3
-module View = View3
 
 (*****************************************************************************)
 (* Purpose *)

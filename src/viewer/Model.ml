@@ -15,7 +15,7 @@
 (* floats are the norm in graphics *)
 open Common2_.ArithFloatInfix
 
-module CairoH = Cairo_helpers3
+module CairoH = Cairo_helpers
 module DM = Dependencies_matrix_code
 module DMBuild = Dependencies_matrix_build
 

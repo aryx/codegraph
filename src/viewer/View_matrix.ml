@@ -17,17 +17,13 @@ open Common
 open Fpath_.Operators
 (* floats are the norm in graphics *)
 open Common2_.ArithFloatInfix
-
 open Figures
-
-open Model3
-module M = Model3
-module Ctl = Controller3
-
+open Model
+module M = Model
+module Ctl = Controller
 module E = Entity_code
 module DM = Dependencies_matrix_code
-
-module CairoH = Cairo_helpers3
+module CairoH = Cairo_helpers
 
 (*****************************************************************************)
 (* Prelude *)
