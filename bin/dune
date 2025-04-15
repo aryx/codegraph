@@ -11,6 +11,8 @@
     commons2_
     lib_parsing
     graph_code
+    paths
+    gitignore
 
     ; now in codemap
     pfff-h_files-format

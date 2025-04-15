@@ -1,6 +1,6 @@
 (* Yoann Padioleau
  *
- * Copyright (C) 2022 r2c
+ * Copyright (C) 2022, 2025 Semgrep Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -18,24 +18,19 @@
 (*****************************************************************************)
 (* File targeting for languages supported by AST_generic.ml
  *
- * Similar to Find_target.ml in semgrep-core, and 
- * the old find_source.ml in pfff.
+ * history: similar to Find_target.ml in semgrep, and the old find_source.ml
+ * in pfff.
  *)
 
 (*****************************************************************************)
-(* API *)
+(* Entry point *)
 (*****************************************************************************)
 
-(* TODO: use List_Files *)
-let files_of_root (_lang : Lang.t) (_root : Fpath.t) : string list =
-  failwith "TODO: files_of_root, use List_files"
-(*
-  let files = 
-    Common.files_of_dir_or_files_no_vcs_nofilter [root] |> Fpath_.of_strings in
-  let files, _skipped = 
-    Skip_code.filter_files_if_skip_list ~root:[Fpath.v root] files in
-  files |> File.Path.to_strings |> List.filter (fun file ->
-      let langs = Lang.langs_of_filename (Fpath.v file) in
+let files_of_root ~(filter_file: (Fpath.t -> bool)) (lang : Lang.t) (root : Fpath.t) : Fpath.t list =
+  let caps = Cap.readdir_UNSAFE () in
+  List_files.list caps root
+   |> List.filter filter_file
+   |> List.filter (fun (file : Fpath.t) ->
+      let langs = Lang.langs_of_filename file in
       List.mem lang langs
   )
-*)

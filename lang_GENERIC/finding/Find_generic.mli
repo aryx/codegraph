@@ -1,2 +1,4 @@
 
-val files_of_root: Lang.t -> Fpath.t (* the root *) -> Common2_.filename list
+val files_of_root: 
+  filter_file:(Fpath.t -> bool) ->
+  Lang.t -> Fpath.t (* the root *) -> Fpath.t list

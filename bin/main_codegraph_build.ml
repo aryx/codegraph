@@ -62,6 +62,30 @@ let set_gc () =
   Gc.set { (Gc.get()) with Gc.space_overhead = 300 };
   ()
 
+let mk_filter_file (root : Fpath.t) : (Fpath.t -> bool) =
+  let gitignore_filter =
+    Gitignore_filter.create
+      ~gitignore_filenames:[
+      Gitignore.{source_kind = "gitignore"; filename = ".gitignore"; format = Gitignore };
+      Gitignore.{source_kind = "codegraphignore"; filename = ".codegraphignore"; format = Gitignore };
+      ]
+    ~project_root:root ()
+  in
+  (fun (file : Fpath.t) : bool ->
+     let ppath =
+        match Ppath.in_project ~root:(Rfpath.of_fpath_exn root) (Rfpath.of_fpath_exn file) with
+        | Ok ppath -> ppath
+        | Error err ->
+              failwith (spf "could not find project path for %s with root = %s (errot = %s)"
+                !!file !!root err)
+     in
+     let (status, _events) =
+       Gitignore_filter.select gitignore_filter ppath
+     in
+     status =*= Gitignore.Not_ignored
+    )
+
+
 (*****************************************************************************)
 (* Building stdlib *)
 (*****************************************************************************)
@@ -97,10 +121,11 @@ let main_action xs =
     try (
     match Lang.of_string_opt !lang_str with
     | Some lang -> 
-         let files = Find_generic.files_of_root lang root in
-         let xs = files |> List.map (fun file ->
-            Logs.info (fun m -> m "parsing %s" file);
-            file, Parse_generic.parse_and_resolve_name lang (Fpath.v file)) in
+         let files = Find_generic.files_of_root ~filter_file:(mk_filter_file root) lang root in
+         let xs = files |> List.map (fun (file : Fpath.t) ->
+            Logs.info (fun m -> m "parsing %s" !!file);
+            !!file, Parse_generic.parse_and_resolve_name lang file) 
+         in
          let hooks = Graph_code_AST.default_hooks in
          let (g, _statsTODO) = Graph_code_AST.build ~root ~hooks lang xs in
          g, empty

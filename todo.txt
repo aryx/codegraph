@@ -2,6 +2,16 @@
 
 * Last
 
+** Last2
+*** update codegraph to OCaml 5.1 AST?
+
+*** filter the equal_xxx, pp_xxx functions, so they don't count as users
+of a field, and also they reduce the number of entities in a file
+(e.g., expanding AST_generic takes forever because of all those generated code)
+
+
+** Last1
+
 *** use model-view-update to simplify the code?
 
 *** rewrite using FRP/ELM style?
