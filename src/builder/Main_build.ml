@@ -4,7 +4,6 @@
  *)
 open Common
 open Fpath_.Operators
-
 module E = Entity_code
 module GC = Graph_code
 module GC2 = Graph_code_opti
@@ -17,19 +16,22 @@ module J = JSON
 (*****************************************************************************)
 (* This program builds the graph database needed by codegraph (and also
  * leveraged now by codemap).
- * See main_codegraph.ml for more information.
+ * See ../main/Main.ml for more information.
  * 
  * todo?
  *  - merge with pfff_db.ml?
  * 
  * history:
- *  - split from main_codegraph.ml
+ *  - split from main_codegraph.ml (now called Main.ml)
  *)
 
 (*****************************************************************************)
 (* Flags *)
 (*****************************************************************************)
 
+let log_level = ref (Some Logs.Warning)
+
+(* TODO: delete *)
 let verbose = ref false
 
 let lang_str = ref "ml"
@@ -40,8 +42,6 @@ let gen_derived_data = ref false
 (* not perfect ... *)
 let class_analysis = ref false
 
-let log_config_file = ref "log_config.json"
-
 (* action mode *)
 let action = ref ""
 
@@ -51,16 +51,6 @@ let action = ref ""
 
 let dep_file_of_dir dir = 
   Filename.concat dir !!Graph_code.default_filename
-
-let set_gc () =
-  (* only relevant in bytecode, in native the stacklimit is the os stacklimit*)
-  Gc.set {(Gc.get ()) with Gc.stack_limit = 1000 * 1024 * 1024};
-  (* see www.elehack.net/michael/blog/2010/06/ocaml-memory-tuning *)
-  Gc.set { (Gc.get()) with Gc.minor_heap_size = 4_000_000 };
-  (* goes from 5300s to 3000s for building db for www *)
-  Gc.set { (Gc.get()) with Gc.major_heap_increment = 8_000_000 };
-  Gc.set { (Gc.get()) with Gc.space_overhead = 300 };
-  ()
 
 let mk_filter_file (root : Fpath.t) : (Fpath.t -> bool) =
   let gitignore_filter =
@@ -498,7 +488,12 @@ let options () = [
   "-verbose", Arg.Unit (fun () ->
     verbose := true;
     DM.verbose := true;
+    log_level := Some Logs.Info
   ), " ";
+  "-debug", Arg.Unit (fun () -> log_level := Some Logs.Debug),
+  " ";
+  "-quiet", Arg.Unit (fun () -> log_level := None),
+  " ";
 
   "-version",   Arg.Unit (fun () -> 
     UCommon.pr2 (spf "CodeGraph build version: %s" "TODO: version");
@@ -517,35 +512,17 @@ let main () =
       (Filename.basename Sys.argv.(0))
       "https://github.com/facebook/pfff/wiki/Codegraph"
   in
-  set_gc ();
 
-  (* TODO: call setup_logging, use cmdliner and parse --debug, --info ... *)
-  Logs_.setup_basic ();
-  Logs.info (fun m -> m "Starting logging");
-  
-(* OLD TO REMOVE
-  let handler = Easy_logging.(Handlers.make (CliErr Debug))
-  (*
-  match config.log_to_file with
-  | None -> Easy_logging.(Handlers.make (CliErr Debug))
-  | Some file -> Easy_logging.(Handlers.make (File (file, Debug)))
-   *)
-   in
-   Logging.apply_to_all_loggers (fun logger -> logger#add_handler handler);
-   Logging.(set_global_level Info);
-                                                                           
-  if Sys.file_exists !log_config_file
-  then begin
-    Logging.load_config_file !log_config_file;
-    logger#info "loaded %s" !log_config_file;
-  end;
-*)
-  
   (* does side effect on many global flags *)
   let args = Arg_.parse_options (options()) usage_msg Sys.argv in
 
+  (* alt: use cmdliner and parse --debug, --info ... *)
+  Logs_.setup ~level:!log_level ();
+  Logs.info (fun m -> m "Starting logging");
+ 
   (* must be done after Arg.parse, because Common.profile is set by it *)
   Profiling.profile_code "Main total" (fun () -> 
+
     (match args with
     (* --------------------------------------------------------- *)
     (* actions, useful to debug subpart *)

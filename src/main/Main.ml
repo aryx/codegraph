@@ -7,7 +7,6 @@ open Fpath_.Operators
 module GC = Graph_code
 module DM = Dependencies_matrix_code
 module DMBuild = Dependencies_matrix_build
-
 module Model = Model3
 module View = View3
 
@@ -172,7 +171,7 @@ module View = View3
 (* Flags *)
 (*****************************************************************************)
 
-let verbose = ref false
+let log_level = ref (Some Logs.Warning)
 
 let deps_style = ref DM.DepsInOut
 
@@ -181,8 +180,6 @@ let deps_style = ref DM.DepsInOut
  * gtk-theme-name = "Murrine-Gray"
  * gtk-font-name = "DejaVu Sans 16"
  *)
-
-let log_config_file = ref "log_config.json"
 
 (* action mode *)
 let action = ref ""
@@ -224,16 +221,6 @@ let constraints_of_info_txt info_txt =
   aux "" info_txt;
   h
 
-let set_gc () =
-  (* only relevant in bytecode, in native the stacklimit is the os stacklimit*)
-  Gc.set {(Gc.get ()) with Gc.stack_limit = 1000 * 1024 * 1024};
-  (* see www.elehack.net/michael/blog/2010/06/ocaml-memory-tuning *)
-  Gc.set { (Gc.get()) with Gc.minor_heap_size = 4_000_000 };
-  (* goes from 5300s to 3000s for building db for www *)
-  Gc.set { (Gc.get()) with Gc.major_heap_increment = 8_000_000 };
-  Gc.set { (Gc.get()) with Gc.space_overhead = 300 };
-  ()
-  
 (*****************************************************************************)
 (* Model Helpers *)
 (*****************************************************************************)
@@ -268,8 +255,6 @@ let dir_node xs =
 let package_node xs = 
   (String.concat "." xs, Entity_code.Package)
 
-
-
 (*****************************************************************************)
 (* Main action, viewing the graph *)
 (*****************************************************************************)
@@ -285,14 +270,11 @@ let package_node xs =
  * maybe can just cache and look if we need to recompute the code graph?
  * same for the dependency matrix that we can cache too.
  *)
-let main_action xs =
-  set_gc ();
+let main_action (x : string) =
   let _locale = GtkMain.Main.init () in
 
   let dir : string (* TODO Fpath.t *) = 
-    match xs with 
-    | [x] -> Rpath.canonical_exn (Fpath.v x) |> Fpath.to_string
-    | _ -> failwith "codegraph expects a single directory argument"
+    Rpath.canonical_exn (Fpath.v x) |> Fpath.to_string
   in
   (* this is to allow to use codegraph from a subdir, see the comment
    * below about "slice of the graph"
@@ -307,7 +289,7 @@ let main_action xs =
                   dir);
   in
   (* let file = dep_file_of_dir root in *)
-  UCommon.pr2 (spf "Using root = %s" !!root);
+  Logs.info (fun m -> m "Using root = %s" !!root);
   let model = build_model root in
 
   let path =
@@ -362,7 +344,6 @@ let main_action xs =
 
 (* ---------------------------------------------------------------------- *)
 let extra_actions () = [
-
 (*
   "-test_phylomel", " <geno file>",
   Common.mk_action_1_arg test_phylomel;
@@ -374,8 +355,8 @@ let extra_actions () = [
 (*****************************************************************************)
 
 let all_actions () = 
-  (* Layer_graph_code.actions() @ *)
   extra_actions () @
+  (* Layer_graph_code.actions() @ *)
   (*  Test_program_lang.actions() @ *)
   []
 
@@ -399,15 +380,16 @@ let options () = [
   Common2_.cmdline_flags_devel () @
   [
   "-verbose", Arg.Unit (fun () ->
-    verbose := true;
+    log_level := Some (Logs.Info);
     DM.verbose := true;
   ), " ";
-
-    "-version",   Arg.Unit (fun () -> 
+  "-debug", Arg.Unit (fun () -> log_level := Some (Logs.Debug)), " ";
+  "-quiet", Arg.Unit (fun () -> log_level := None), " ";
+  "-version",   Arg.Unit (fun () -> 
       UCommon.pr2 (spf "CodeGraph version: %s" "TODO: codegraph version");
       exit 0;
     ), 
-    " guess what";
+   " guess what";
   ]
 
 (*****************************************************************************)
@@ -423,24 +405,16 @@ let main () =
       "https://github.com/facebook/pfff/wiki/Codegraph"
   in
   
-  (* TODO: call setup_logging, use cmdliner and parse --debug, --info ... *)
-  Logs_.setup_basic ();
-  Logs.info (fun m -> m "Starting logging");
-
-(*
-
-  if Sys.file_exists !log_config_file
-  then begin
-    Logging.load_config_file !log_config_file;
-    Logs.info (fun m -> m "loaded %s" !log_config_file);
-  end;
-*)
-  
   (* does side effect on many global flags *)
   let args = Arg_.parse_options (options()) usage_msg Sys.argv in
 
+  (* alt: use cmdliner and parse --debug, --info ... *)
+  Logs_.setup ~level:!log_level ();
+  Logs.info (fun m -> m "Starting logging");
+
   (* must be done after Arg.parse, because Common.profile is set by it *)
   Profiling.profile_code "Main total" (fun () -> 
+
     (match args with
     (* --------------------------------------------------------- *)
     (* actions, useful to debug subpart *)
@@ -454,13 +428,13 @@ let main () =
     (* --------------------------------------------------------- *)
     (* main entry *)
     (* --------------------------------------------------------- *)
-    | x::xs -> 
-        main_action (x::xs)
+    | [ x ]  -> 
+        main_action x
 
     (* --------------------------------------------------------- *)
     (* empty entry *)
     (* --------------------------------------------------------- *)
-    | [] -> 
+    | [] | _::_::_ -> 
         Arg_.usage usage_msg (options())
     )
   )
