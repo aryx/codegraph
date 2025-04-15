@@ -521,13 +521,13 @@ let add_path x path = path @ [x]
 
 let button_action _da w ev =
   let (x, y) = GdkEvent.Button.x ev, GdkEvent.Button.y ev in
-  UCommon.pr2 (spf "button action device coord: %f, %f" x y);
+  Logs.debug (fun m -> m "button action device coord: %f, %f" x y);
 
   let cr = Cairo.create w.overlay in
   M.scale_coordinate_system cr w;
 
   let (x, y) = Cairo.device_to_user cr x y in
-  UCommon.pr2 (spf "button action user coord: %f, %f" x y);
+  Logs.debug (fun m -> m "button action user coord: %f, %f" x y);
 
   (match M.find_region_at_user_point w ~x ~y with
   | None -> false
@@ -536,13 +536,13 @@ let button_action _da w ev =
       | Row i -> 
             (match GdkEvent.get_type ev, GdkEvent.Button.button ev with
             | `TWO_BUTTON_PRESS, 1 ->
-                UCommon.pr2 (spf "double clicking on row i");
+                Logs.debug (fun m ->  m "double clicking on row i");
                 let node = w.m.DM.i_to_name.(i) in
                 w.path <- add_path (DM.Expand node) w.path;
                 recompute_matrix w;
                 true
             | `BUTTON_PRESS, 3 ->
-                UCommon.pr2 (spf "right clicking on row i");
+                Logs.debug (fun m -> m "right clicking on row i");
                 let node = w.m.DM.i_to_name.(i) in
                 w.path <- add_path (DM.Focus (node, DM.DepsOut)) w.path;
                 recompute_matrix w;
@@ -554,7 +554,7 @@ let button_action _da w ev =
       | Cell (i, j) -> 
             (match GdkEvent.get_type ev, GdkEvent.Button.button ev with
             | `BUTTON_PRESS, 1 ->
-                UCommon.pr2 (spf "clicking on cell (%d, %d)" i j);
+                Logs.debug (fun m -> m "clicking on cell (%d, %d)" i j);
                 let deps = 
                   DM.explain_cell_list_use_edges  (i, j) w.m w.model.gopti in
                 let ncount =
@@ -584,12 +584,12 @@ let button_action _da w ev =
                     (if List.length deps >= ncount then "\n   ...  \n" else "")
                   ) |> String.concat "\n"
                 in
-                UCommon.pr2 str;
+                Logs.debug (fun m -> m "%s" str);
                 Gui.dialog_text ~text:str ~title:"Cell explaination";
                 true
 
             | `BUTTON_PRESS, 3 ->
-                UCommon.pr2 (spf "right clicking on cell (%d, %d)" i j);
+                Logs.debug (fun m -> m "right clicking on cell (%d, %d)" i j);
                 if i =|= j
                 then begin
                   let node = w.m.DM.i_to_name.(j) in
@@ -606,13 +606,13 @@ let button_action _da w ev =
       | Column j ->
             (match GdkEvent.get_type ev, GdkEvent.Button.button ev with
             | `TWO_BUTTON_PRESS, 1 ->
-                UCommon.pr2 (spf "double clicking on column j");
+                Logs.debug (fun m -> m "double clicking on column j");
                 let node = w.m.DM.i_to_name.(j) in
                 w.path <- add_path (DM.Expand node) w.path;
                 recompute_matrix w;
                 true
             | `BUTTON_PRESS, 3 ->
-                UCommon.pr2 (spf "right clicking on column j");
+                Logs.debug (fun m -> m "right clicking on column j");
                 let node = w.m.DM.i_to_name.(j) in
                 w.path <- add_path (DM.Focus (node, DM.DepsIn)) w.path;
                 recompute_matrix w;

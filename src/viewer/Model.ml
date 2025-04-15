@@ -189,7 +189,7 @@ let layout_of_w w =
 (* Helpers *)
 (*****************************************************************************)
 
-let find_region_at_user_point2 w ~x ~y =
+let find_region_at_user_point w ~x ~y =
   let regions = w.interactive_regions in
   let pt = { Figures. x = x; y = y } in
   regions |> List_.find_some_opt (fun (kind, rect) ->
@@ -197,7 +197,4 @@ let find_region_at_user_point2 w ~x ~y =
       then Some kind
       else None
   )
-
-let find_region_at_user_point w ~x ~y =
-  Profiling.profile_code "model.find_region" (fun () ->
-    find_region_at_user_point2 w ~x ~y)
+[@@profiling]

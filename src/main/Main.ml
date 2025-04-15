@@ -237,7 +237,7 @@ let build_model (root : Fpath.t) =
   let constraints =
     if Sys.file_exists (Filename.concat !!root "info.txt")
     then begin
-      UCommon.pr2 (spf "using %s" (Filename.concat !!root "info.txt"));
+      Logs.info (fun m -> m "using %s" (Filename.concat !!root "info.txt"));
       let info_txt = Info_code.load (Filename.concat !!root "info.txt") in
       constraints_of_info_txt info_txt
     end
@@ -317,7 +317,7 @@ let main_action (x : string) =
                 failwith "could not find a Dir or Package"
       in
       let (str, kind) = dir_or_package start in
-      UCommon.pr2 (spf "focusing on %s %s" 
+      Logs.info (fun m -> m "focusing on %s %s" 
               (Entity_code.string_of_entity_kind kind) str);
       let rec aux before xs =
         match xs with
@@ -395,8 +395,6 @@ let options () = [
 (*****************************************************************************)
 
 let main () = 
-
-  (* Common_extra.set_link(); *)
   let usage_msg = 
     spf "Usage: %s [options] <dir> \nDoc: %s\nOptions:"
       (Filename.basename Sys.argv.(0))
@@ -405,8 +403,6 @@ let main () =
   
   (* does side effect on many global flags *)
   let args = Arg_.parse_options (options()) usage_msg Sys.argv in
-
-  (* alt: use cmdliner and parse --debug, --info ... *)
   Logs_.setup ~level:!log_level ();
   Logs.info (fun m -> m "Starting logging");
 

@@ -120,7 +120,7 @@ let draw_green_yellow_dependent_rows ~cr w i =
 let motion_notify_refresher _da w ev () =
 
   let (x, y) = GdkEvent.Motion.x ev, GdkEvent.Motion.y ev in
-  UCommon.pr2 (spf "motion device coord: %f, %f" x y);
+  Logs.debug (fun m -> m "motion device coord: %f, %f" x y);
 
   let cr = Cairo.create w.overlay in
   M.scale_coordinate_system cr w;
@@ -129,7 +129,7 @@ let motion_notify_refresher _da w ev () =
   CairoH.clear cr;
 
   let (x, y) = Cairo.device_to_user cr x y in
-  UCommon.pr2 (spf "motion user coord: %f, %f" x y);
+  Logs.debug (fun m -> m "motion user coord: %f, %f" x y);
 
   (* less: update status bar? *)
   (match M.find_region_at_user_point w ~x ~y with
