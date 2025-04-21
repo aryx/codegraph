@@ -150,12 +150,17 @@ let parse ~show_parse_error file =
   | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
   | exn ->
       let e = Exception.catch exn in
-      UCommon.pr2_once (spf "PARSE ERROR with %s, exn = %s" file (Common.exn_to_s exn));
+      Logs.warn (fun m -> m "PARSE ERROR with %s, exn = %s" file (Common.exn_to_s exn));
       Exception.reraise e
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+
+let cnt = ref 0
+let gensym s =
+  incr cnt;
+  spf "%s-%d" s !cnt
 
 let error s tok = failwith (spf "%s: %s" (Tok.stringpos_of_tok tok) s)
 
@@ -166,7 +171,7 @@ let new_name_if_defs env (s, tok) =
   if env.phase =*= Defs then (
     if Hashtbl.mem env.local_rename s then
       error (spf "Duped new name: %s" s) tok;
-    let s2 = Graph_code.gensym s in
+    let s2 = gensym s in
     Hashtbl.add env.local_rename s s2;
     (s2, tok))
   else (Hashtbl.find env.local_rename s, tok)
