@@ -143,10 +143,9 @@ let ( ==~ ) = Common2_.( ==~ )
 
 let parse env file =
   try
-    Common.save_excursion Flag_parsing_php.strict_lexer true (fun () ->
         let cst = Parse_php.parse_program (Fpath.v file) in
         let ast = Ast_php_build.program cst in
-        ast)
+        ast
   with
   | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
   | exn ->

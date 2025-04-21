@@ -64,8 +64,8 @@ let parse file =
       | Time_limit.Timeout _ as exn -> Exception.catch_and_reraise exn
       | exn ->
           let e = Exception.catch exn in
-          UCommon.pr2_once
-            (spf "PARSE ERROR with %s, exn = %s" file (Exception.to_string e));
+          Logs.warn (fun m -> m
+            "PARSE ERROR with %s, exn = %s" file (Exception.to_string e));
           [])
 
 (*****************************************************************************)

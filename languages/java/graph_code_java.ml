@@ -106,8 +106,8 @@ let parse ~show_parse_error (file : string) =
   | exn ->
       let e = Exception.catch exn in
       if show_parse_error then
-        UCommon.pr2_once
-          (spf "PARSE ERROR with %s, exn = %s" file (Exception.to_string e));
+        Logs.err (fun m -> 
+          m "PARSE ERROR with %s, exn = %s" file (Exception.to_string e));
       []
 
 let str_of_qualified_ident xs = xs |> List.map Ast.unwrap |> String.concat "."
@@ -366,8 +366,8 @@ let rec extract_defs_uses ~phase ~g ~ast ~readable ~lookup_fails =
                   *)
                  ()
              | None ->
-                 UCommon.pr2_once
-                   (spf "PB: wrong import: %s"
+                 Logs.warn (fun m -> m 
+                   "PB: wrong import: %s"
                       (str_of_qualified_ident qualified_ident_bis)))
          | _ -> ());
 

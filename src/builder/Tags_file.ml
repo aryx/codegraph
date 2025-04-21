@@ -203,8 +203,8 @@ let generate_TAGS_file tags_file files_and_defs =
                         String.length tag.tag_definition_text
                         > threshold_long_line
                       then (
-                        UCommon.pr2_once
-                          (spf "WEIRD long string in %s, passing the tag" file);
+                        Logs.warn (fun m -> m
+                          "WEIRD long string in %s, passing the tag" file);
                         None)
                       else Some (string_of_tag tag))
                |> String.concat ""

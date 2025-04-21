@@ -71,7 +71,7 @@ let defs_of_graph_code ?(verbose = false) g =
                  Logs.err (fun m -> m "PB accessing line %d of %s" line file);
                  ""
              | Sys_error _no_such_file ->
-                 UCommon.pr2_once (spf "PB accessing file %s" file);
+                 Logs.warn (fun m -> m "PB accessing file %s" file);
                  ""
            in
            let tag =

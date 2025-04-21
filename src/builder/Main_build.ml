@@ -311,7 +311,7 @@ let test_adhoc_deps graph_file =
       let file2 = !!(GC.file_of_node n1 g) in
       if file2 =~ ".*tests/" || file2 =~ ".*/__tests__/.*"
       then begin
-        UCommon.pr2_once (spf "%s --> %s" file2 file);
+        Logs.debug (fun m -> m "%s --> %s" file2 file);
         (*pr2 (spf " %s --> %s" (GC.string_of_node n1) (GC.string_of_node n2));*)
       end
     end
