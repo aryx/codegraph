@@ -3,6 +3,8 @@
 default:
 	dune build _build/install/default/bin/{codegraph,codegraph_build}
 
+all:
+	dune build
 clean:
 	dune clean
 test:
