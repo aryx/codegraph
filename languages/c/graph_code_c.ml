@@ -1099,7 +1099,7 @@ let build (root : Fpath.t) files =
   let elems =
     files |> List.map (fun file ->
                let ast = parse ~show_parse_error:true file in
-               let readable = !!(Filename_.readable ~root (Fpath.v file)) in
+               let readable = (Filename_.readable ~root:(!!root) (file)) in
                let local_rename = Hashtbl.create 101 in
                (ast, readable, local_rename))
   in

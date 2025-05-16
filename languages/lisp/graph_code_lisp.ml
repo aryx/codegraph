@@ -243,14 +243,14 @@ let build (root : Fpath.t) files =
   env.pr2_and_log "\nstep1: extract defs";
   files |> List.iter (fun file ->
              let ast = parse file in
-             let readable_file = Filename_.readable ~root (Fpath.v file) in
+             let readable_file = Fpath.v (Filename_.readable ~root:(!!root) (file)) in
              extract_defs_uses { env with phase = Defs; readable_file } ast);
 
   (* step2: creating the 'Use' edges *)
   env.pr2_and_log "\nstep2: extract Uses";
   files |> List.iter (fun file ->
              let ast = parse file in
-             let readable_file = Filename_.readable ~root (Fpath.v file) in
+             let readable_file = Fpath.v (Filename_.readable ~root:(!!root) (file)) in
              extract_defs_uses { env with phase = Uses; readable_file } ast);
 
   g

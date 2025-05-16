@@ -368,7 +368,7 @@ and module_directive env x =
                                    (Tok.stringpos_of_tok tok));
                 spf "NOTFOUND-|%s|.js" file
             | Some fullpath -> 
-                    !!(Filename_.readable env.root (Fpath.v fullpath))
+                    (Filename_.readable (!!(env.root)) (fullpath))
           in
           str2_opt |> Option.iter (fun str2 ->
             Hashtbl.replace env.imports str2 (mk_qualified_name readable str1)
@@ -602,7 +602,7 @@ and expr env e =
 
   | New _ ->  (* TODO *) ()
 
-  | Conditional (e1, _, e2, _, e3) ->
+  | Conditional (e1, e2, e3) ->
       List.iter (expr env) [e1;e2;e3]
   | Xml x -> xml env x
 
@@ -742,7 +742,7 @@ let build_gen ?(verbose=false) (root : Fpath.t) files =
       let file_readable =
         if file = Stdlib_js.path_stdlib
         then "Stdlib.js"
-        else !!(Filename_.readable ~root (Fpath.v file))
+        else (Filename_.readable ~root:(!!root) (file))
       in
       extract_defs_uses { env with
                           phase = Defs; file_readable; imports = Hashtbl.create 13;
@@ -762,7 +762,7 @@ let build_gen ?(verbose=false) (root : Fpath.t) files =
   env.pr2_and_log "\nstep2: extract uses";
   files |> List.iter (fun file ->
       let ast = parse file in
-      let file_readable = !!(Filename_.readable ~root (Fpath.v file)) in
+      let file_readable = (Filename_.readable ~root:(!!root) (file)) in
       extract_defs_uses { env with
                           phase = Uses; file_readable;
                           locals = []; imports = Hashtbl.copy default_import;

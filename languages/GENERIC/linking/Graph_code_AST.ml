@@ -144,7 +144,7 @@ let build ~root ~hooks lang xs =
   let env_for_file phase file ast =
     let readable = 
       if Fpath.equal root (Fpath.v file) then "<called_on_single_file>" 
-      else !!(Filename_.readable ~root (Fpath.v file ))
+      else (Filename_.readable ~root:(!!root) (file ))
     in
     Logs.info (fun m -> m "readable: %s" readable);
     let current_parent, current_qualifier =

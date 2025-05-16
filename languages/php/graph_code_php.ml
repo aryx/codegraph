@@ -1124,7 +1124,7 @@ let build ?(verbose = true)
       path =
         (fun file ->
           if readable_file_format 
-          then !!(Filename_.readable root (Fpath.v file))
+          then (Filename_.readable (!!root) (file))
           else file);
     }
   in
@@ -1133,7 +1133,7 @@ let build ?(verbose = true)
   env.pr2_and_log "\nstep1: extract defs";
   Profiling.profile_code "Graph_php.step1" (fun () ->
       files |> List.iter (fun file ->
-                 let readable = !!(Filename_.readable root (Fpath.v file)) in
+                 let readable = (Filename_.readable (!!root) (file)) in
                  let ast = parse env file in
                  (* will modify env.dupes instead of raise Graph_code.NodeAlreadyPresent *)
                  extract_defs_uses { env with phase = Defs } ast readable));

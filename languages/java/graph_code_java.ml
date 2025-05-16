@@ -863,14 +863,14 @@ let build ?(verbose = true) ?(only_defs = false) (root : Fpath.t) files =
   (* step1: creating the nodes and 'Has' edges, the defs *)
   if verbose then UCommon.pr2 "\nstep1: extract defs";
   files |> List.iter (fun file ->
-             let readable = !!(Filename_.readable ~root (Fpath.v file)) in
+             let readable = (Filename_.readable ~root:(!!root) (file)) in
              let ast = parse ~show_parse_error:true file in
              extract_defs_uses ~phase:Defs ~g ~ast ~readable ~lookup_fails);
   if not only_defs then (
     (* step2: creating the 'Use' edges just for inheritance *)
     if verbose then UCommon.pr2 "\nstep2: extract inheritance information";
     files |> List.iter (fun file ->
-               let readable = !!(Filename_.readable ~root (Fpath.v file)) in
+               let readable = (Filename_.readable ~root:(!!root) (file)) in
                let ast = parse ~show_parse_error:false file in
                extract_defs_uses ~phase:Inheritance ~g ~ast ~readable
                  ~lookup_fails);
@@ -878,7 +878,7 @@ let build ?(verbose = true) ?(only_defs = false) (root : Fpath.t) files =
     (* step3: creating the 'Use' edges that can rely on recursive inheritance *)
     if verbose then UCommon.pr2 "\nstep3: extract uses";
     files |> List.iter (fun file ->
-               let readable = !!(Filename_.readable ~root (Fpath.v file)) in
+               let readable = (Filename_.readable ~root:(!!root) (file)) in
                let ast = parse ~show_parse_error:false file in
                extract_defs_uses ~phase:Uses ~g ~ast ~readable ~lookup_fails));
   g

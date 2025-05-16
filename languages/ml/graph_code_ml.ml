@@ -202,14 +202,14 @@ let build ?(verbose = true) (root : Fpath.t) files =
   (* step1: creating the nodes and 'Has' edges, the defs *)
   if verbose then UCommon.pr2 "\nstep1: extract defs";
   files |> List.iter (fun file ->
-             let readable = Filename_.readable ~root (Fpath.v file) in
+             let readable = Fpath.v (Filename_.readable ~root:(!!root) (file)) in
              let ast = (* parse file *) () in
              extract_defs ~g ~duplicate_modules ~ast ~readable ~file);
 
   (* step2: creating the 'Use' edges, the uses *)
   if verbose then UCommon.pr2 "\nstep2: extract uses";
   files |> List.iter (fun file ->
-             let readable = Filename_.readable ~root (Fpath.v file) in
+             let readable = Fpath.v (Filename_.readable ~root:(!!root) (file)) in
              (* skip files under external/ for now *)
              if !!readable =~ ".*external/" || !!readable =~ "web/.*" then ()
              else

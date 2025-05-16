@@ -569,7 +569,7 @@ let button_action _da w ev =
                 let str = 
                   grouped_deps |> List.map (fun ((f1, f2), deps) ->
                     let final_file f =
-                      try Filename_.readable ~root:w.model.root f
+                      try Fpath.v (Filename_.readable ~root:(!!(w.model.root)) (!!f))
                       with Failure _ -> f
                     in
                     let f1 = final_file f1 in
