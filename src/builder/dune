@@ -19,6 +19,7 @@
     database_code ; for graph_code_database
 
     ; for find_source, the find_source_files_or...
+    codegraph.finder
     parser_php.ast
     parser_cpp.ast
     ;TODO parser_c.ast

@@ -1,0 +1,10 @@
+(library
+ (public_name codegraph.finder)
+ (name codegraph_finder)
+ (wrapped false)
+ (libraries
+   fpath
+   commons2_
+ )
+ (preprocess (pps ppx_deriving.show profiling.ppx))
+)
