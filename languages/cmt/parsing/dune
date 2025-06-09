@@ -4,7 +4,8 @@
  (wrapped false)
  (libraries
    commons
-
    compiler-libs
  )
+
+ (preprocess (pps ppx_deriving.show profiling.ppx))
 )

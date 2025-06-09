@@ -1,0 +1,15 @@
+(executables
+ (names Main)
+ (libraries 
+   mylib
+ )
+ ; for ocamldebug
+ (modes native byte)
+ ;(preprocess (pps ppx_deriving.show profiling.ppx))
+)
+
+(install
+ (package codegraph_cmt_test)
+ (section bin)
+ (files (Main.exe as codegraph_cmt_test))
+)

@@ -57,7 +57,7 @@
     pfff-lang_GENERIC_linking
 
     ; in lang_SPECIFIC/pfff-bytecode
-    ;TODO pfff-lang_cmt pfff-lang_cmt-analyze
+    pfff-lang_cmt-analyze
 
  )
  ; for ocamldebug

@@ -6,12 +6,12 @@
    ounit2
    compiler-libs
 
-   commons
+   commons commons2_
    lib_parsing
    graph_code 
    parser_ocaml.ast
    
    pfff-lang_cmt
-   pfff-lang_ml-analyze
+   ;pfff-lang_ml-analyze
 )
 )

@@ -88,7 +88,8 @@ let vof_arg_label = function
   | Optional s -> OCaml.VSum(("Optional", [ OCaml.VString s]))
 
 
-let rec vof_type_expr { desc = v_desc; level = v_level; id = v_id; scope = _TODO } =
+let rec vof_transient_expr (x : Types.transient_expr) : OCaml.v =
+  let { desc = v_desc; level = v_level; id = v_id; scope = _TODO } = x in
   let bnds = [] in
   let arg = Ocaml.vof_int v_id in
   let bnd = ("id", arg) in
@@ -98,6 +99,10 @@ let rec vof_type_expr { desc = v_desc; level = v_level; id = v_id; scope = _TODO
   let bnds = bnd :: bnds in
   let arg = vof_type_desc v_desc in
   let bnd = ("desc", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+
+and vof_type_expr (x : Types.type_expr) : OCaml.v =
+  vof_transient_expr (Transient_expr.repr x)
+
 and vof_type_desc =
   function
   | Tvar v1 ->
@@ -136,7 +141,7 @@ and vof_type_desc =
       in Ocaml.VSum (("Tfield", [ v1; v2; v3; v4 ]))
   | Tnil -> Ocaml.VSum (("Tnil", []))
   | Tlink v1 -> let v1 = vof_type_expr v1 in Ocaml.VSum (("Tlink", [ v1 ]))
-  | Tsubst v1 -> let v1 = vof_type_expr v1 in Ocaml.VSum (("Tsubst", [ v1 ]))
+  | Tsubst (v1, _texpr_optTODO) -> let v1 = vof_type_expr v1 in Ocaml.VSum (("Tsubst", [ v1 ]))
   | Tvariant v1 ->
       let v1 = vof_row_desc v1 in Ocaml.VSum (("Tvariant", [ v1 ]))
   | Tunivar v1 ->
@@ -146,19 +151,23 @@ and vof_type_desc =
       let v1 = vof_type_expr v1
       and v2 = Ocaml.vof_list vof_type_expr v2
       in Ocaml.VSum (("Tpoly", [ v1; v2 ]))
-  | Tpackage ((v1, v2, v3)) ->
-      let v1 = Path.vof_t v1
-      and v2 = Ocaml.vof_list Longident.vof_t v2
-      and v3 = Ocaml.vof_list vof_type_expr v3
-      in Ocaml.VSum (("Tpackage", [ v1; v2; v3 ]))
-and vof_row_desc {
-                 row_fields = v_row_fields;
-                 row_more = v_row_more;
-                 row_bound = v_row_bound;
-                 row_closed = v_row_closed;
-                 row_fixed = _v_row_fixedTODO;
-                 row_name = v_row_name
-               } =
+  | Tpackage (v1, v2) ->
+      let v1 = Path.vof_t v1 in
+      let v2 = Ocaml.vof_list (fun (v1, v2) -> 
+            let v1 = Longident.vof_t v1 in
+            let v2 = vof_type_expr v2 in
+            OCaml.VTuple [v1; v2]) v2 in
+      Ocaml.VSum (("Tpackage", [ v1; v2 ]))
+and vof_row_desc (x : row_desc) : OCaml.v =
+  let Row {
+                 fields = v_row_fields;
+                 more = v_row_more;
+                 (* row_bound = v_row_bound; *)
+                 closed = v_row_closed;
+                 fixed = _v_row_fixedTODO;
+                 name = v_row_name
+               } = Types.row_repr x in
+
   let bnds = [] in
   let arg =
     Ocaml.vof_option
@@ -175,9 +184,11 @@ and vof_row_desc {
   let arg = Ocaml.vof_bool v_row_closed in
   let bnd = ("row_closed", arg) in
   let bnds = bnd :: bnds in
+(*
   let arg = Ocaml.vof_unit v_row_bound in
   let bnd = ("row_bound", arg) in
   let bnds = bnd :: bnds in
+*)
   let arg = vof_type_expr v_row_more in
   let bnd = ("row_more", arg) in
   let bnds = bnd :: bnds in
@@ -189,17 +200,18 @@ and vof_row_desc {
          in Ocaml.VTuple [ v1; v2 ])
       v_row_fields in
   let bnd = ("row_fields", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
-and vof_row_field =
+and vof_row_field ( x : Types.row_field) : OCaml.v =
+  vof_row_field_view (Types.row_field_repr x)
+and vof_row_field_view =
   function
   | Rpresent v1 ->
       let v1 = Ocaml.vof_option vof_type_expr v1
       in Ocaml.VSum (("Rpresent", [ v1 ]))
-  | Reither ((v1, v2, v3, v4)) ->
+  | Reither ((v1, v2, v3)) ->
       let v1 = Ocaml.vof_bool v1
       and v2 = Ocaml.vof_list vof_type_expr v2
       and v3 = Ocaml.vof_bool v3
-      and v4 = Ocaml.vof_ref (Ocaml.vof_option vof_row_field) v4
-      in Ocaml.VSum (("Reither", [ v1; v2; v3; v4 ]))
+      in Ocaml.VSum (("Reither", [ v1; v2; v3 ]))
   | Rabsent -> Ocaml.VSum (("Rabsent", []))
 and vof_abbrev_memo =
   function
@@ -214,20 +226,12 @@ and vof_abbrev_memo =
   | Mlink v1 ->
       let v1 = Ocaml.vof_ref vof_abbrev_memo v1
       in Ocaml.VSum (("Mlink", [ v1 ]))
-and vof_field_kind =
-  function
-  | Fvar v1 ->
-      let v1 = Ocaml.vof_ref (Ocaml.vof_option vof_field_kind) v1
-      in Ocaml.VSum (("Fvar", [ v1 ]))
-  | Fpresent -> Ocaml.VSum (("Fpresent", []))
-  | Fabsent -> Ocaml.VSum (("Fabsent", []))
-and vof_commutable =
-  function
-  | Cok -> Ocaml.VSum (("Cok", []))
-  | Cunknown -> Ocaml.VSum (("Cunknown", []))
-  | Clink v1 ->
-      let v1 = Ocaml.vof_ref vof_commutable v1
-      in Ocaml.VSum (("Clink", [ v1 ]))
+
+and vof_field_kind ( _x : field_kind) : OCaml.v =
+  OCaml.VTODO "field_kind"
+
+and vof_commutable ( _x : commutable) : OCaml.v =
+  OCaml.VTODO "commutable"
 
 let vof_type_expr_show_all x = vof_type_expr x
 
@@ -297,7 +301,7 @@ and vof_pattern_desc : type a. a pattern_desc -> Ocaml.v =
   | Tpat_tuple v1 ->
       let v1 = Ocaml.vof_list vof_pattern v1
       in Ocaml.VSum (("Tpat_tuple", [ v1 ]))
-  | Tpat_construct ((v1, v2, v3)) ->
+  | Tpat_construct ((v1, v2, v3, _v4TODO)) ->
       let v1 = vof_loc Longident.vof_t v1
       and v2 = vof_constructor_description v2
       and v3 = Ocaml.vof_list vof_pattern v3
@@ -512,11 +516,10 @@ and vof_expression_desc =
       and v5 = vof_direction_flag v5
       and v6 = vof_expression v6
       in Ocaml.VSum (("Texp_for", [ v1; v2; v3; v4; v5; v6 ]))
-  | Texp_send ((v1, v2, v3)) ->
+  | Texp_send ((v1, v2)) ->
       let v1 = vof_expression v1
       and v2 = vof_meth v2
-      and v3 = Ocaml.vof_option vof_expression v3
-      in Ocaml.VSum (("Texp_send", [ v1; v2; v3 ]))
+      in Ocaml.VSum (("Texp_send", [ v1; v2 ]))
   | Texp_new ((v1, v2, v3)) ->
       let v1 = Path.vof_t v1
       and v2 = vof_loc Longident.vof_t v2
@@ -538,7 +541,7 @@ and vof_expression_desc =
       and v2 =
         Ocaml.vof_list
           (fun (v1, v2, v3) ->
-             let v1 = Path.vof_t v1
+             let v1 = Ident.vof_t v1
              and v2 = vof_loc Ocaml.vof_string v2
              and v3 = vof_expression v3
              in Ocaml.VTuple [ v1; v2; v3 ])
@@ -575,6 +578,7 @@ and vof_meth =
       let v1 = Ocaml.vof_string v1 in Ocaml.VSum (("Tmeth_name", [ v1 ]))
   | Tmeth_val v1 ->
       let v1 = Ident.vof_t v1 in Ocaml.VSum (("Tmeth_val", [ v1 ]))
+  | Tmeth_ancestor _ -> OCaml.VTODO "Tmeth_ancestor"
 
 and vof_record_label_definition = 
   function
@@ -1070,6 +1074,9 @@ and vof_signature_item_desc =
     error "Tsig_typext"
   | Tsig_attribute _ ->
     error "Tsig_attribute"
+  | Tsig_modtypesubst _ ->
+      OCaml.VTODO "Tsig_modtypesubst"
+
 and vof_with_constraint =
   function
   | Twith_type v1 ->
@@ -1085,6 +1092,11 @@ and vof_with_constraint =
       let v1 = Path.vof_t v1
       and v2 = vof_loc Longident.vof_t v2
       in Ocaml.VSum (("Twith_modsubst", [ v1; v2 ]))
+  | Twith_modtype _ ->
+      OCaml.VTODO "Twith_modtype"
+  | Twith_modtypesubst _ ->
+      OCaml.VTODO "Twith_modtypesubst"
+
 and vof_core_type {
                   ctyp_desc = v_ctyp_desc;
                   ctyp_type = _v_ctyp_type;
@@ -1676,7 +1688,8 @@ and vof_constructor_declaration {
                                 cd_args = v_cd_args;
                                 cd_res = v_cd_res;
                                 cd_loc = v_cd_loc;
-                                cd_attributes = v_cd_attributes
+                                cd_attributes = v_cd_attributes;
+                                cd_vars = _TODO;
                               } =
   let bnds = [] in
   let arg = vof_attributes v_cd_attributes in
@@ -1732,7 +1745,7 @@ and vof_label_declaration {
 
 and vof_extension_constructor_kind =
   function
-  | Text_decl ((v1, v2)) ->
+  | Text_decl ((_v0TODO, v1, v2)) ->
       let v1 = vof_constructor_arguments v1
       and v2 = Ocaml.vof_option vof_core_type v2
       in Ocaml.VSum (("Text_decl", [ v1; v2 ]))

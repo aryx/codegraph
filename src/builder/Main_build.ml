@@ -167,13 +167,10 @@ let main_action xs =
 
 (*#if FEATURE_CMT*)
     | "cmt"  -> 
-          let _ml_files = Find_source.files_of_root ~lang:"ml" root in
-          let _cmt_files = Find_source.files_of_root ~lang:"cmt" root in
-          failwith "TODO: cmt"
-(*
-          Graph_code_cmt.build ~root ~cmt_files ~ml_files, 
+          let ml_files = Find_source.files_of_root ~lang:"ml" root in
+          let cmt_files = Find_source.files_of_root ~lang:"cmt" root in
+          Graph_code_cmt.build root ~cmt_files ~ml_files, 
           empty
-*)
 (*#endif*)
 
     | _ -> failwith ("language not supported: " ^ !lang_str)
@@ -462,7 +459,7 @@ let extra_actions () = [
 
 let all_actions () = 
   extra_actions () @
-(* TODO  Test_parsing_cmt.actions () @ *)
+  Test_parsing_cmt.actions () @
   []
 
 let options () = [

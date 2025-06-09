@@ -13,12 +13,26 @@ module G = Graph_code
 (*****************************************************************************)
 let verbose = false
 
+(* dup of unit_version_control.ml *)
+let with_tmp_dir f =
+  let tmp_dir =
+    Filename.temp_file (spf "with-tmp-dir-%d" (Unix.getpid ())) ""
+  in
+  Unix.unlink tmp_dir;
+  (* who cares about race *)
+  Unix.mkdir tmp_dir 0o755;
+  Common.finalize
+    (fun () -> f tmp_dir)
+    (fun () ->
+      Sys.command (spf "rm -f %s/*" tmp_dir) |> ignore;
+      Unix.rmdir tmp_dir)
+
 let with_graph ~files f =
-  Common2.with_tmp_dir (fun tmp_dir ->
+  with_tmp_dir (fun tmp_dir ->
     let root = tmp_dir in
     (* generating .cmt files *)
     files |> List.iter (fun (filename, content) ->
-      Common.write_file ~file:(Filename.concat tmp_dir filename) content
+      UFile.Legacy.write_file ~file:(Filename.concat tmp_dir filename) content
     );
     (* otherwise will get many lookup failure when build the graph_code *)
     let extra_args = "-nostdlib -nopervasives" in
@@ -29,10 +43,10 @@ let with_graph ~files f =
                         * is ordered for ocamlc to work, which means generic
                         * files first and main files at the end.
                         *)
-                       (files |> List.map fst |> Common.join " ")) |> ignore;
-    let cmt_files = Lib_parsing_ml.find_cmt_files_of_dir_or_files [Fpath.v tmp_dir] |> File.Path.to_strings in
+                       (files |> List.map fst |> String.concat " ")) |> ignore;
+    let cmt_files = Lib_parsing_ml.find_cmt_files_of_dir_or_files [Fpath.v tmp_dir] |> Fpath_.to_strings in
     let ml_files = [] in
-    let g = Graph_code_cmt.build ~root ~cmt_files ~ml_files in
+    let g = Graph_code_cmt.build (Fpath.v root) ~cmt_files ~ml_files in
     f tmp_dir g
   )
 
@@ -41,19 +55,19 @@ let prolog_query ~files query =
   with_graph ~files (fun tmp_dir g ->
     let facts = Graph_code_prolog.build g in
     let facts_pl_file = Filename.concat tmp_dir "facts.pl" in
-    Common.with_open_outfile facts_pl_file (fun (pr_no_nl, _chan) ->
+    UFile.Legacy.with_open_outfile facts_pl_file (fun (pr_no_nl, _chan) ->
       let pr s = pr_no_nl (s ^ "\n") in
       facts |> List.iter (fun x -> pr (Prolog_code.string_of_fact x))
       );
     let predicates_file = 
       Filename.concat (*TODO: Config_pfff.path_pfff_home*) "" "h_program-lang/prolog_code.pl" in
     if verbose 
-    then Common.cat facts_pl_file |> List.iter pr2;
+    then UFile.Legacy.cat facts_pl_file |> List.iter UCommon.pr2;
     let cmd =
       spf "swipl -s %s -f %s -t halt --quiet -g \"%s ,fail\""
         facts_pl_file predicates_file query
     in
-    let xs = Common.cmd_to_list cmd in
+    let xs = UCmd.cmd_to_list cmd in
     xs
   )
 

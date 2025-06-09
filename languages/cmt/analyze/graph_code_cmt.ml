@@ -1,7 +1,8 @@
 (* Yoann Padioleau
  *
  * Copyright (C) 2012-2014 Facebook
- * Copyright (C) 2020 R2C
+ * Copyright (C) 2020 Semgrep Inc.
+ * Copyright (C) 2025 Yoann Padioleau
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -14,14 +15,11 @@
  * license.txt for more details.
  *)
 open Common
-
+open Fpath_.Operators
 module E = Entity_code
 module G = Graph_code
-
 open Cmt_format
 open Typedtree
-
-let logger = Logging.get_logger [__MODULE__]
 
 let debug = ref false
 
@@ -30,7 +28,7 @@ let debug = ref false
 (*****************************************************************************)
 (*
  * Graph of dependencies for OCaml typed AST files (.cmt). See graph_code.ml
- * and main_codegraph.ml for more information. See also notes_cmt.txt.
+ * and src/Main.ml for more information. See also notes_cmt.txt.
  * 
  * schema:
  *  Root -> Dir -> Module -> Function
@@ -63,15 +61,14 @@ type env = {
 
   phase: phase;
 
-
   (* the .cmt, used mostly for error reporting, in readable path format *)
-  cmt_file: Common.filename;
+  cmt_file: Common2_.filename;
   (* the file the .cmt is supposed to come from, in readable path format *)
-  ml_file: Common.filename;
+  ml_file: Common2_.filename;
   (* update: readable means relative to project root dir and without the
    * dune special encoding (no _build/default or .pp or .objs in it) *)
 
-  source_finder: string (* basename *) -> Common.filename list;
+  source_finder: string (* basename *) -> Common2_.filename list;
   
   current: Graph_code.node;
   current_entity: name;
@@ -99,7 +96,6 @@ type env = {
   module_aliases: (name * name) list ref;
   type_aliases: (name * name) list ref;
   
-  (* less: log and pr2_and_log fields like in other graphers? *)
   lookup_fail: env -> Graph_code.node -> unit;
 }
  (* todo: what about names which are applications of functor? 
@@ -118,7 +114,7 @@ let hook_def_node = ref (fun _node _g -> ())
 
 (* because we use a 2 passes process (should do like in PHP all in 1 pass?) *)
 let _hmemo = Hashtbl.create 101
-let parse file =
+let parse (file : Common2_.filename) : Cmt_format.cmt_infos  =
   Common.memoized _hmemo file (fun () ->
     try 
       Cmt_format.read_cmt file
@@ -129,6 +125,13 @@ let parse file =
 (*****************************************************************************)
 (* Naming helpers *)
 (*****************************************************************************)
+
+let top_module_of_node (s, kind) =
+  if s =~ "^\\([A-Z][A-Za-z0-9_]*\\)" then Common.matched1 s
+  else
+    failwith
+      (spf "could not find top module of %s"
+         (Graph_code.string_of_node (s, kind)))
 
 let final_string_of_ident s =
   s
@@ -152,7 +155,7 @@ let string_of_id_opt idopt =
    | Some id -> string_of_id id
 
 let s_of_n xs = 
- xs |> List.map final_string_of_ident |> Common.join "."
+ xs |> List.map final_string_of_ident |> String.concat "."
 
 
 let (name_of_path: Path.t -> name) = fun path ->
@@ -180,16 +183,15 @@ let (name_of_path: Path.t -> name) = fun path ->
 (*****************************************************************************)
 (* Other helpers *)
 (*****************************************************************************)
-let unwrap x = 
-  x.Asttypes.loc
+let unwrap (x : 'a Location.loc) : Location.t = 
+  x.loc
 
-let pos_of_loc loc file =
-  let  lexing_pos = loc.Location.loc_start in
-  { Tok.
-    str ="";
-    pos = { Pos.
+let pos_of_loc (loc : Location.t) (file : Fpath.t) : Tok.location =
+  let lexing_pos = loc.Location.loc_start in
+  { str = "";
+    pos = {
       line = lexing_pos.Lexing.pos_lnum; 
-      charpos = lexing_pos.Lexing.pos_cnum;
+      bytepos = lexing_pos.Lexing.pos_cnum;
       column = lexing_pos.Lexing.pos_cnum - lexing_pos.Lexing.pos_bol;
       file;
     }
@@ -237,7 +239,7 @@ let readable_path_of_ast ast root readable_cmt source_finder =
    * and the use of source_finder below.
    *)
   let readable_opt = 
-    try Some (Common.readable ~root fullpath)
+    try Some (Filename_.readable ~root fullpath)
     with Failure _ -> None
   in 
   let res = 
@@ -246,15 +248,15 @@ let readable_path_of_ast ast root readable_cmt source_finder =
    | Some readable when Sys.file_exists fullpath -> readable
    | Some _readable ->
        let candidates = ["mll"; "mly"; "dyp"] in
-       let (d,b,_e) = Common2.dbe_of_filename fullpath in
+       let (d,b,_e) = Filename_.dbe_of_filename fullpath in
        let xs = candidates |> List.map (fun ext ->
-          Common2.filename_of_dbe (d,b,ext))
+          Filename_.filename_of_dbe (d,b,ext))
         in
        (match xs |> List.find_opt Sys.file_exists with
-       | Some fullpath -> Common.readable ~root fullpath
+       | Some fullpath -> Filename_.readable ~root fullpath
        | None ->
-        logger#debug "no matching source for %s, candidates = [%s]"
-                  readable_cmt (xs |> Common.join ", ");
+        Logs.warn (fun m -> m "no matching source for %s, candidates = [%s]"
+                  readable_cmt (xs |> String.concat ", "));
         (spf "TODO_NO_SOURCE_FOUND:%s" fullpath)
        )
        
@@ -273,8 +275,8 @@ let readable_path_of_ast ast root readable_cmt source_finder =
       try 
         xs |> List.find (fun file -> Filename.dirname file = dir_cmt)
       with Not_found ->
-        logger#debug "no matching source for %s, candidates = [%s]"
-                  readable_cmt (xs |> Common.join ", ");
+        Logs.warn (fun m -> m "no matching source for %s, candidates = [%s]"
+                  readable_cmt (xs |> String.concat ", "));
         (spf "TODO_NO_SOURCE_FOUND:%s" fullpath)
     )
   in
@@ -313,7 +315,7 @@ let is_builtin_type s =
 
 let add_use_edge env dst loc =
   let file = env.ml_file in
-  let pos = pos_of_loc loc file in
+  let pos = pos_of_loc loc (Fpath.v file) in
   let src = env.current in
   if G.has_node dst env.g
   then begin 
@@ -330,7 +332,7 @@ let add_use_edge env dst loc =
     !hook_use_edge (src, dst) env.g pos;
   end
 
-let full_path_local_of_kind env kind =
+let full_path_local_of_kind (env : env) (kind : E.kind) : (string * name) list ref =
   match kind with
   | E.Function | E.Global | E.Constant
   | E.TopStmts
@@ -345,8 +347,8 @@ let full_path_local_of_kind env kind =
   | E.Other _ -> ref []
   | _ -> raise Impossible
 
-let add_full_path_local env (s, name) kind =
-  Common.push (s, name) (full_path_local_of_kind env kind)
+let add_full_path_local (env : env) (s, name) (kind : E.kind) : unit =
+  Stack_.push (s, name) (full_path_local_of_kind env kind)
 
 let add_node_and_edge_if_defs_mode ?(dupe_ok=false) env name_node loc =
   let (name, kind) = name_node in
@@ -359,11 +361,13 @@ let add_node_and_edge_if_defs_mode ?(dupe_ok=false) env name_node loc =
       env.g |> G.add_edge (env.current, node) G.Has;
 
       let file = env.ml_file in
-      let pos = pos_of_loc loc file in
+      let pos = pos_of_loc loc (Fpath.v file) in
       let nodeinfo = { Graph_code.
          pos = pos;
          props = [];
          typ = None; (* TODO *)
+         range = None;
+         scip_symbol = None;
       } in
       env.g |> G.add_nodeinfo node nodeinfo;
       !hook_def_node node env.g;
@@ -417,7 +421,7 @@ let rec path_type_resolve_aliases env pt =
   | [t] -> List.rev (t::acc)
   | x::xs ->
       let reduced_candidates = 
-        module_aliases_candidates |> Common.map_filter (function
+        module_aliases_candidates |> List.filter_map (function
         | (y::ys, v) when x = y -> Some (ys, v)
         | _ -> None
         )
@@ -445,7 +449,7 @@ let path_resolve_aliases env p =
   | [x] -> List.rev (x::acc)
   | x::xs ->
       let reduced_candidates = 
-        module_aliases_candidates |> Common.map_filter (function
+        module_aliases_candidates |> List.filter_map (function
         | (y::ys, v) when x = y -> Some (ys, v)
         | _ -> None
         )
@@ -467,8 +471,11 @@ let path_resolve_aliases env p =
 (* Kind of entity *)
 (*****************************************************************************)
     
-let rec kind_of_type_desc x =
-  if !debug then pr2 (OCaml.string_of_v (Meta_ast_cmt.vof_type_desc x));
+let rec kind_of_type_desc (x : Types.type_desc) : E.kind =
+(*
+  if !debug then 
+  UCommon.pr2 (OCaml.string_of_v (Meta_ast_cmt.vof_type_desc x));
+*)
   match x with
   | Types.Tarrow _ -> 
       E.Function
@@ -487,11 +494,11 @@ let rec kind_of_type_desc x =
   | Types.Tobject _ -> E.Class
   | Types.Tpackage _ -> E.Module
   | _ -> 
-      pr2 (OCaml.string_of_v (Meta_ast_cmt.vof_type_desc x));
+      (* UCommon.pr2 (OCaml.string_of_v (Meta_ast_cmt.vof_type_desc x)); *)
       raise Todo
       
-and kind_of_type_expr x =
-  kind_of_type_desc x.Types.desc
+and kind_of_type_expr (x : Types.type_expr) =
+  kind_of_type_desc (Types.Transient_expr.repr x).desc
     
 (* used only for primitives *)
 let kind_of_core_type x =
@@ -508,14 +515,16 @@ let kind_of_value_descr vd =
 (* Uses with name resolution *)
 (*****************************************************************************)
 
-let typename_of_texpr x =
+let typename_of_texpr ( x : Types.type_expr) =
+(*
   if !debug then pr2(OCaml.string_of_v(Meta_ast_cmt.vof_type_expr_show_all x));
+*)
   let rec aux x = 
-    match x.Types.desc with
+    match (Types.Transient_expr.repr x).desc with
     | Types.Tconstr(path, _xs, _aref) -> path
     | Types.Tlink t -> aux t
     | _ ->
-      pr2 (OCaml.string_of_v (Meta_ast_cmt.vof_type_expr_show_all x));
+      (* pr2 (OCaml.string_of_v (Meta_ast_cmt.vof_type_expr_show_all x)); *)
       raise Todo
   in
   let path = aux x in
@@ -623,7 +632,7 @@ let rec extract_defs_uses ~root env ast readable_cmt =
   }
   in
   if env.phase =*= Defs then begin
-    let dir = Common2.dirname readable_cmt in
+    let dir = Filename.dirname readable_cmt in
     G.create_intermediate_directories_if_not_present env.g dir;
     env.g |> G.add_node env.current;
     env.g |> G.add_edge ((dir, E.Dir), env.current) G.Has;
@@ -652,7 +661,7 @@ and binary_annots env = function
 
   | Packed _ 
   | Partial_implementation _ | Partial_interface _ ->
-      pr2_gen env.current;
+      UCommon.pr2_gen env.current;
       raise Todo
 
 and structure env 
@@ -790,7 +799,7 @@ and structure_item_desc env loc = function
         | Ttype_abstract, Some ({ctyp_desc=Ttyp_constr (path, _lid, _xs); _}) ->
           if env.phase =*= Defs then
             let name = name_of_path path in
-            Common.push (full_ident, path_resolve_locals env name E.Type)
+            Stack_.push (full_ident, path_resolve_locals env name E.Type)
               env.type_aliases
         | _ -> ()
         );
@@ -826,7 +835,7 @@ and structure_item_desc env loc = function
           (* do not add nodes for module aliases in the graph *)
           if env.phase =*= Defs then begin
             let name = name_of_path path in
-            Common.push (full_ident, path_resolve_locals env name E.Module) 
+            Stack_.push (full_ident, path_resolve_locals env name E.Module) 
               env.module_aliases
           end;
           add_full_path_local env (string_of_id_opt id, full_ident) E.Module
@@ -955,7 +964,7 @@ and exception_declaration _env _x =
 and sig_item_desc env loc = function
   | Tsig_type (recflag, xs) -> 
     structure_item_desc env loc (Tstr_type (recflag, xs))
-  | _ -> pr2_once "TODO: sig_item_desc"
+  | _ -> UCommon.pr2_once "TODO: sig_item_desc"
 
 (* ---------------------------------------------------------------------- *)
 (* Pattern *)
@@ -978,7 +987,7 @@ and pattern_desc : type a. TypesOld.type_expr -> env -> a pattern_desc -> unit =
       constant env v1
   | Tpat_tuple xs -> 
       List.iter (pattern env) xs
-  | Tpat_construct (lid, v3, v4)
+  | Tpat_construct (lid, v3, v4, _v5)
     ->
       add_use_edge_lid env lid t E.Constructor;
       let _ = constructor_description env v3
@@ -1141,10 +1150,9 @@ and expression_desc t env =
       expression env v4;
       let env = { env with locals = string_of_id id::env.locals } in
       expression env v6
-  | Texp_send ((v1, v2, v3)) ->
+  | Texp_send ((v1, v2)) ->
       let _ = expression env v1
       and _ = meth env v2
-      and _ = v_option (expression env) v3
       in ()
   | Texp_new ((v1, _loc_longident, v3)) ->
       let _ = path_t env v1
@@ -1278,7 +1286,7 @@ and core_type_desc env =
   | Ttyp_poly ((v1, v2)) ->
       let _ = List.iter v_string v1 and _ = core_type env v2 in ()
   | Ttyp_package _v1 -> 
-    pr2_once (spf "TODO: Ttyp_package, %s" env.cmt_file)
+    UCommon.pr2_once (spf "TODO: Ttyp_package, %s" env.cmt_file)
 
 and object_field env x = 
   match x.of_desc with
@@ -1316,7 +1324,8 @@ and
 (* Main entry point *)
 (*****************************************************************************)
 
-let build ~root ~cmt_files ~ml_files  =
+let build (root : Fpath.t) ~cmt_files ~ml_files =
+  let root = !!root in
 
   let files = cmt_files in
   let g = G.create () in
@@ -1342,20 +1351,18 @@ let build ~root ~cmt_files ~ml_files  =
     full_path_local_module = ref [];
     lookup_fail = (fun env dst ->
       let src = env.current in
-      logger#debug "PB: lookup_fail on %s (in %s, in file %s)"
-             (G.string_of_node dst) (G.string_of_node src) env.cmt_file;
+      Logs.warn (fun m -> m "PB: lookup_fail on %s (in %s, in file %s)"
+             (G.string_of_node dst) (G.string_of_node src) env.cmt_file);
       (* less: could also use Hashtbl.replace to count entities only once *)
       Hashtbl.add hstat_lookup_failures dst true;
     );
   } in
 
   (* step1: creating the nodes and 'Has' edges, the defs *)
-  logger#info "\nstep1: extract defs";
-  files |> Console.progress ~show:true (fun k -> 
-    List.iter (fun file ->
-      k();
+  Logs.info (fun m -> m "\nstep1: extract defs");
+  files |> List.iter (fun file ->
       let ast = parse file in
-      let readable_cmt = undo_dune_cmtfile (Common.readable ~root file) in
+      let readable_cmt = undo_dune_cmtfile (Filename_.readable ~root file) in
       try 
       extract_defs_uses ~root { env with phase = Defs } ast readable_cmt
       with 
@@ -1365,48 +1372,46 @@ let build ~root ~cmt_files ~ml_files  =
          file (Graph_code.string_of_error err))
       | exn ->
         failwith (spf "exn with %s (exn = %s)" file (Common.exn_to_s exn))
-    ));
+    );
 
   (* step2: creating the 'Use' edges *)
-  logger#info "\nstep2: extract uses";
-  files |> Console.progress ~show:true (fun k -> 
-    List.iter (fun file ->
-      k();
-      logger#info "analyzing %s" file;
+  Logs.info (fun m -> m "\nstep2: extract uses");
+  files |> List.iter (fun file ->
+      Logs.info (fun m -> m "analyzing %s" file);
       let ast = parse file in
-      let readable_cmt = undo_dune_cmtfile (Common.readable ~root file) in
+      let readable_cmt = undo_dune_cmtfile (Filename_.readable ~root file) in
       (* old: pad: a bit pad specific *)
       if readable_cmt =~ "^external"
       then ()
       else extract_defs_uses ~root { env with phase = Uses} ast readable_cmt
-    ));
+    );
   if !debug then begin
-    pr2 "";
-    pr2 "Module aliases";
-    !(env.module_aliases) |> List.iter pr2_gen;
-    pr2 "Type aliases";
-    !(env.type_aliases) |> List.iter pr2_gen;
+    UCommon.pr2 "";
+    UCommon.pr2 "Module aliases";
+    !(env.module_aliases) |> List.iter UCommon.pr2_gen;
+    UCommon.pr2 "Type aliases";
+    !(env.type_aliases) |> List.iter UCommon.pr2_gen;
   end;
 
   (* lookup failures summary *)
-  let xs = Common.hashset_to_list hstat_lookup_failures in
-  let modules = xs |> Common.map_filter
+  let xs = Hashtbl_.hashset_to_list hstat_lookup_failures in
+  let modules = xs |> List.filter_map
     (fun node-> 
         try 
-          Some (Module_ml.top_module_of_node node, ())
+          Some (top_module_of_node node, ())
         with Failure _ ->
             (* todo: ex:
              * could not find top module of Function: sexp_of_compilation_unit
              *)
             None
     ) in
-  let counts = modules |> Common.group_assoc_bykey_eff 
+  let counts = modules |> Assoc.group_assoc_bykey_eff 
                        |> List.map (fun (x, xs)-> x, List.length xs) 
-                       |> Common.sort_by_val_highfirst
-                       |> Common.take_safe 20
+                       |> Assoc.sort_by_val_highfirst
+                       |> List_.take_safe 20
   in
-  pr2 "Top lookup failures per modules";
-  counts |> List.iter (fun (s, n) -> pr2 (spf "%-30s = %d" s n));
+  UCommon.pr2 "Top lookup failures per modules";
+  counts |> List.iter (fun (s, n) -> UCommon.pr2 (spf "%-30s = %d" s n));
 
   (* finally return the graph *)
   g

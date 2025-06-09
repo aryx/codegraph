@@ -1,0 +1,2 @@
+(lang dune 2.9)
+(name codegraph_cmt_test)
