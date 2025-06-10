@@ -183,6 +183,10 @@ let (name_of_path: Path.t -> name) = fun path ->
 (*****************************************************************************)
 (* Other helpers *)
 (*****************************************************************************)
+
+let todo _env s = 
+  Logs.err (fun m -> m "TODO: Graph_code_cmt %s" s)
+
 let unwrap (x : 'a Location.loc) : Location.t = 
   x.loc
 
@@ -929,7 +933,7 @@ and type_kind env = function
         core_type env typ;
       ) xs
   | Ttype_open ->
-    failwith "GCC:Ttype_open"
+    todo env "Ttype_open"
 
 and constructor_arguments env = function
   | Cstr_tuple (args) ->
@@ -971,7 +975,8 @@ and sig_item_desc env loc = function
 (* ---------------------------------------------------------------------- *)
 and pattern_desc : type a. TypesOld.type_expr -> env -> a pattern_desc -> unit =
   fun t env -> function
-  | Tpat_exception _ -> failwith "Tpat_exception"
+  | Tpat_exception _ -> 
+      todo env "Tpat_exception"
   | Tpat_value v1 -> 
       (* v1 has a weird private type that forbid to access it, so
        * use Obj.magic to go around it *)
@@ -1188,12 +1193,12 @@ and expression_desc t env =
       let _ = class_structure env v1 and _ = List.iter v_string v2 in ()
   | Texp_pack v1 -> let _ = module_expr env v1 in ()
   | Texp_unreachable ->
-      failwith "Texp_unreachable"
+      todo env "Texp_unreachable"
   | Texp_letexception (_exn_ctorTODO, e) ->
      (* todo: in theory we should define locally this exn *)
       expression env e
   | Texp_extension_constructor (_, _) ->
-      failwith "Texp_extension_constructor"
+      todo env "Texp_extension_constructor"
   | Texp_open (_v1TODO, v2) -> 
       expression env v2
 
@@ -1288,12 +1293,12 @@ and core_type_desc env =
   | Ttyp_package _v1 -> 
     UCommon.pr2_once (spf "TODO: Ttyp_package, %s" env.cmt_file)
 
-and object_field env x = 
+and object_field env x : unit = 
   match x.of_desc with
   | OTtag (_str, typ) -> 
       core_type env typ
   | OTinherit _ ->
-    failwith "OTinherit"
+    todo env "OTinherit"
 
 
  
@@ -1359,7 +1364,7 @@ let build (root : Fpath.t) ~cmt_files ~ml_files =
   } in
 
   (* step1: creating the nodes and 'Has' edges, the defs *)
-  Logs.info (fun m -> m "\nstep1: extract defs");
+  Logs.info (fun m -> m "STEP1: extract defs");
   files |> List.iter (fun file ->
       let ast = parse file in
       let readable_cmt = undo_dune_cmtfile (Filename_.readable ~root file) in
@@ -1375,7 +1380,7 @@ let build (root : Fpath.t) ~cmt_files ~ml_files =
     );
 
   (* step2: creating the 'Use' edges *)
-  Logs.info (fun m -> m "\nstep2: extract uses");
+  Logs.info (fun m -> m "STEP2: extract uses");
   files |> List.iter (fun file ->
       Logs.info (fun m -> m "analyzing %s" file);
       let ast = parse file in
