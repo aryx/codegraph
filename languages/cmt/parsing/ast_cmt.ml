@@ -17,8 +17,10 @@
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* This is mostly a wrapper around the OCaml compiler-libs and its
- * typed OCaml tree but with a 'deriving show' to easily dump it.
+(* This is mostly a copy of types in the OCaml compiler-libs and especially
+ * the typed OCaml tree but with a 'deriving show' to easily dump it.
+ * Note that there is also a printast.ml in compiler-libs but this file
+ * provides more control on how to print the typed AST.
  * 
  * Starting from ocaml 4.02, the library
  * https://github.com/ocaml-ppx/ocaml-migrate-parsetree
@@ -41,31 +43,1260 @@
  *  - use deriving to avoid the boilerplate updates
  *)
 
-
 (***************************************************************************)
 (* Intermediate modules *)
 (***************************************************************************)
 
-(* misc.mli *)
 module Misc_ = struct
+
 type modname = string
 [@@deriving show]
 
 end
 
-(* types.mli *)
-module Types_ = struct
-type signature = Types.signature
-let pp_signature _fmt _x = ()
+module Location_ = struct
+
+type t = Location.t
+let pp _fmt _x = ()
+
+type 'a loc = 'a Location.loc
+let pp_loc _fmt _ofa _x = ()
+
 end
 
-(* typedtree.mli *)
+module Ident_ = struct
+
+type t = Ident.t
+let pp _fmt _x = ()
+
+end
+
+module Path_ = struct
+
+type t = Path.t
+let pp _fmt _x = ()
+
+end
+
+
+module Env_ = struct
+
+type t = Env.t
+let pp _fmt _x = ()
+
+end
+
+module Asttypes_ = struct
+
+type constant = Asttypes.constant =
+    Const_int of int
+  | Const_char of char
+  | Const_string of string * Location_.t * string option
+  | Const_float of string
+  | Const_int32 of int32
+  | Const_int64 of int64
+  | Const_nativeint of nativeint
+[@@deriving show]
+
+type rec_flag = Asttypes.rec_flag =
+  Nonrecursive | Recursive
+[@@deriving show]
+
+type direction_flag = Asttypes.direction_flag =
+  Upto | Downto
+[@@deriving show]
+
+(* Order matters, used in polymorphic comparison *)
+type private_flag = Asttypes.private_flag =
+  Private | Public
+[@@deriving show]
+
+type mutable_flag = Asttypes.mutable_flag =
+ Immutable | Mutable
+[@@deriving show]
+
+type virtual_flag = Asttypes.virtual_flag = 
+ Virtual | Concrete
+[@@deriving show]
+
+type override_flag = Asttypes.override_flag = 
+ Override | Fresh
+[@@deriving show]
+
+type closed_flag = Asttypes.closed_flag =
+  Closed | Open
+[@@deriving show]
+
+type label = string
+[@@deriving show]
+
+type arg_label = Asttypes.arg_label =
+    Nolabel
+  | Labelled of string (** [label:T -> ...] *)
+  | Optional of string (** [?label:T -> ...] *)
+[@@deriving show]
+
+type variance = Asttypes.variance =
+  | Covariant
+  | Contravariant
+  | NoVariance
+[@@deriving show]
+
+type injectivity = Asttypes.injectivity =
+  | Injective
+  | NoInjectivity
+[@@deriving show]
+
+end
+
+
+module Types_ = struct
+
+type type_expr = Types.type_expr
+type row_desc = Types.row_desc
+type row_field = Types.row_field
+type field_kind = Types.field_kind
+type commutable = Types.commutable
+
+type type_desc = Types.type_desc =
+  | Tvar of string option
+  (** [Tvar (Some "a")] ==> ['a] or ['_a]
+      [Tvar None]       ==> [_] *)
+
+  | Tarrow of Asttypes_.arg_label * type_expr * type_expr * commutable
+  (** [Tarrow (Nolabel,      e1, e2, c)] ==> [e1    -> e2]
+      [Tarrow (Labelled "l", e1, e2, c)] ==> [l:e1  -> e2]
+      [Tarrow (Optional "l", e1, e2, c)] ==> [?l:e1 -> e2]
+
+      See [commutable] for the last argument. *)
+
+  | Ttuple of type_expr list
+  (** [Ttuple [t1;...;tn]] ==> [(t1 * ... * tn)] *)
+
+  | Tconstr of Path.t * type_expr list * abbrev_memo ref
+  (** [Tconstr (`A.B.t', [t1;...;tn], _)] ==> [(t1,...,tn) A.B.t]
+      The last parameter keep tracks of known expansions, see [abbrev_memo]. *)
+
+  | Tobject of type_expr * (Path.t * type_expr list) option ref
+  (** [Tobject (`f1:t1;...;fn: tn', `None')] ==> [< f1: t1; ...; fn: tn >]
+      f1, fn are represented as a linked list of types using Tfield and Tnil
+      constructors.
+
+      [Tobject (_, `Some (`A.ct', [t1;...;tn]')] ==> [(t1, ..., tn) A.ct].
+      where A.ct is the type of some class.
+
+      There are also special cases for so-called "class-types", cf. [Typeclass]
+      and [Ctype.set_object_name]:
+
+        [Tobject (Tfield(_,_,...(Tfield(_,_,rv)...),
+                         Some(`A.#ct`, [rv;t1;...;tn])]
+             ==> [(t1, ..., tn) #A.ct]
+        [Tobject (_, Some(`A.#ct`, [Tnil;t1;...;tn])] ==> [(t1, ..., tn) A.ct]
+
+      where [rv] is the hidden row variable.
+  *)
+
+  | Tfield of string * field_kind * type_expr * type_expr
+  (** [Tfield ("foo", field_public, t, ts)] ==> [<...; foo : t; ts>] *)
+
+  | Tnil
+  (** [Tnil] ==> [<...; >] *)
+
+  | Tlink of type_expr
+  (** Indirection used by unification engine. *)
+
+  | Tsubst of type_expr * type_expr option
+  (** [Tsubst] is used temporarily to store information in low-level
+      functions manipulating representation of types, such as
+      instantiation or copy.
+      The first argument contains a copy of the original node.
+      The second is available only when the first is the row variable of
+      a polymorphic variant.  It then contains a copy of the whole variant.
+      This constructor should not appear outside of these cases. *)
+
+  | Tvariant of row_desc
+  (** Representation of polymorphic variants, see [row_desc]. *)
+
+  | Tunivar of string option
+  (** Occurrence of a type variable introduced by a
+      forall quantifier / [Tpoly]. *)
+
+  | Tpoly of type_expr * type_expr list
+  (** [Tpoly (ty,tyl)] ==> ['a1... 'an. ty],
+      where 'a1 ... 'an are names given to types in tyl
+      and occurrences of those types in ty. *)
+
+  | Tpackage of Path.t * (Longident.t * type_expr) list
+  (** Type of a first-class module (a.k.a package). *)
+
+and fixed_explanation = Types.fixed_explanation =
+  | Univar of type_expr (** The row type was bound to an univar *)
+  | Fixed_private (** The row type is private *)
+  | Reified of Path.t (** The row was reified *)
+  | Rigid (** The row type was made rigid during constraint verification *)
+
+(** [abbrev_memo] allows one to keep track of different expansions of a type
+    alias. This is done for performance purposes.
+
+    For instance, when defining [type 'a pair = 'a * 'a], when one refers to an
+    ['a pair], it is just a shortcut for the ['a * 'a] type.
+    This expansion will be stored in the [abbrev_memo] of the corresponding
+    [Tconstr] node.
+
+    In practice, [abbrev_memo] behaves like list of expansions with a mutable
+    tail.
+
+    Note on marshalling: [abbrev_memo] must not appear in saved types.
+    [Btype], with [cleanup_abbrev] and [memo], takes care of tracking and
+    removing abbreviations.
+*)
+and abbrev_memo = Types.abbrev_memo =
+  | Mnil (** No known abbreviation *)
+
+  | Mcons of Asttypes_.private_flag * Path.t * type_expr * type_expr * abbrev_memo
+  (** Found one abbreviation.
+      A valid abbreviation should be at least as visible and reachable by the
+      same path.
+      The first expression is the abbreviation and the second the expansion. *)
+
+  | Mlink of abbrev_memo ref
+  (** Abbreviations can be found after this indirection *)
+
+
+
+type field_kind_view = Types.field_kind_view =
+    Fprivate
+  | Fpublic
+  | Fabsent
+
+(** Transient [type_expr].
+    Should only be used immediately after [Transient_expr.repr] *)
+type transient_expr = Types.transient_expr = private
+      { mutable desc: type_desc;
+        mutable level: int;
+        mutable scope: int;
+        id: int }
+
+(** get all fields at once; different from the old [row_repr] *)
+type row_desc_repr = Types.row_desc_repr =
+    Row of { fields: (Asttypes_.label * row_field) list;
+             more:   type_expr;
+             closed: bool;
+             fixed:  fixed_explanation option;
+             name:   (Path.t * type_expr list) option }
+
+(** Current contents of a row field *)
+type row_field_view = Types.row_field_view =
+    Rpresent of type_expr option
+  | Reither of bool * type_expr list * bool
+        (* 1st true denotes a constant constructor *)
+        (* 2nd true denotes a tag in a pattern matching, and
+           is erased later *)
+  | Rabsent
+
+(* Value descriptions *)
+
+type value_description = Types.value_description =
+  { val_type: type_expr;                (* Type of the value *)
+    val_kind: value_kind;
+    val_loc: Location.t;
+    val_attributes: Parsetree.attributes;
+    val_uid: Types.Uid.t;
+  }
+
+and value_kind = Types.value_kind =
+    Val_reg                             (* Regular value *)
+  | Val_prim of Primitive.description   (* Primitive *)
+  | Val_ivar of Asttypes_.mutable_flag * string   (* Instance variable (mutable ?) *)
+  | Val_self of class_signature * self_meths * Ident.t Types.Vars.t * string
+                                        (* Self *)
+  | Val_anc of class_signature * Ident.t Types.Meths.t * string
+                                        (* Ancestor *)
+
+and self_meths = Types.self_meths =
+  | Self_concrete of Ident.t Types.Meths.t
+  | Self_virtual of Ident.t Types.Meths.t ref
+
+and class_signature = Types.class_signature =
+  { csig_self: type_expr;
+    mutable csig_self_row: type_expr;
+    mutable csig_vars: (Asttypes_.mutable_flag * Asttypes_.virtual_flag * type_expr) Types.Vars.t;
+    mutable csig_meths: (method_privacy * Asttypes_.virtual_flag * type_expr) Types.Meths.t; }
+
+and method_privacy = Types.method_privacy =
+  | Mpublic
+  | Mprivate of field_kind
+    (* The [field_kind] is always [Fabsent] in a complete class type. *)
+
+
+
+(* Type definitions *)
+
+type type_declaration = Types.type_declaration =
+  { type_params: type_expr list;
+    type_arity: int;
+    type_kind: type_decl_kind;
+    type_private: Asttypes_.private_flag;
+    type_manifest: type_expr option;
+    type_variance: Types.Variance.t list;
+    (* covariant, contravariant, weakly contravariant, injective *)
+    type_separability: Types.Separability.t list;
+    type_is_newtype: bool;
+    type_expansion_scope: int;
+    type_loc: Location.t;
+    type_attributes: Parsetree.attributes;
+    type_immediate: Type_immediacy.t;
+    type_unboxed_default: bool;
+    (* true if the unboxed-ness of this type was chosen by a compiler flag *)
+    type_uid: Types.Uid.t;
+  }
+
+and type_decl_kind = (label_declaration, constructor_declaration) type_kind
+
+and ('lbl, 'cstr) type_kind = ('lbl, 'cstr) Types.type_kind =
+    Type_abstract
+  | Type_record of 'lbl list  * record_representation
+  | Type_variant of 'cstr list * variant_representation
+  | Type_open
+
+and record_representation = Types.record_representation =
+    Record_regular                      (* All fields are boxed / tagged *)
+  | Record_float                        (* All fields are floats *)
+  | Record_unboxed of bool    (* Unboxed single-field record, inlined or not *)
+  | Record_inlined of int               (* Inlined record *)
+  | Record_extension of Path.t          (* Inlined record under extension *)
+
+and variant_representation = Types.variant_representation =
+    Variant_regular          (* Constant or boxed constructors *)
+  | Variant_unboxed          (* One unboxed single-field constructor *)
+
+and label_declaration = Types.label_declaration =
+  {
+    ld_id: Ident.t;
+    ld_mutable: Asttypes_.mutable_flag;
+    ld_type: type_expr;
+    ld_loc: Location.t;
+    ld_attributes: Parsetree.attributes;
+    ld_uid: Types.Uid.t;
+  }
+
+and constructor_declaration = Types.constructor_declaration =
+  {
+    cd_id: Ident.t;
+    cd_args: constructor_arguments;
+    cd_res: type_expr option;
+    cd_loc: Location.t;
+    cd_attributes: Parsetree.attributes;
+    cd_uid: Types.Uid.t;
+  }
+
+and constructor_arguments = Types.constructor_arguments =
+  | Cstr_tuple of type_expr list
+  | Cstr_record of label_declaration list
+
+type extension_constructor = Types.extension_constructor =
+  {
+    ext_type_path: Path.t;
+    ext_type_params: type_expr list;
+    ext_args: constructor_arguments;
+    ext_ret_type: type_expr option;
+    ext_private: Asttypes_.private_flag;
+    ext_loc: Location.t;
+    ext_attributes: Parsetree.attributes;
+    ext_uid: Types.Uid.t;
+  }
+
+and type_transparence = Types.type_transparence =
+    Type_public      (* unrestricted expansion *)
+  | Type_new         (* "new" type *)
+  | Type_private     (* private type *)
+
+(* Type expressions for the class language *)
+
+type class_type = Types.class_type =
+    Cty_constr of Path.t * type_expr list * class_type
+  | Cty_signature of class_signature
+  | Cty_arrow of Asttypes_.arg_label * type_expr * class_type
+
+type class_declaration = Types.class_declaration =
+  { cty_params: type_expr list;
+    mutable cty_type: class_type;
+    cty_path: Path.t;
+    cty_new: type_expr option;
+    cty_variance: Types.Variance.t list;
+    cty_loc: Location.t;
+    cty_attributes: Parsetree.attributes;
+    cty_uid: Types.Uid.t;
+  }
+
+type class_type_declaration = Types.class_type_declaration =
+  { clty_params: type_expr list;
+    clty_type: class_type;
+    clty_path: Path.t;
+    clty_variance: Types.Variance.t list;
+    clty_loc: Location.t;
+    clty_attributes: Parsetree.attributes;
+    clty_uid: Types.Uid.t;
+  }
+
+(* Type expressions for the module language *)
+
+type visibility = Types.visibility =
+  | Exported
+  | Hidden
+
+type module_type = Types.module_type =
+    Mty_ident of Path.t
+  | Mty_signature of signature
+  | Mty_functor of functor_parameter * module_type
+  | Mty_alias of Path.t
+
+and functor_parameter = Types.functor_parameter =
+  | Unit
+  | Named of Ident.t option * module_type
+
+and module_presence = Types.module_presence =
+  | Mp_present
+  | Mp_absent
+
+and signature = signature_item list
+
+and signature_item = Types.signature_item =
+    Sig_value of Ident.t * value_description * visibility
+  | Sig_type of Ident.t * type_declaration * rec_status * visibility
+  | Sig_typext of Ident.t * extension_constructor * ext_status * visibility
+  | Sig_module of
+      Ident.t * module_presence * module_declaration * rec_status * visibility
+  | Sig_modtype of Ident.t * modtype_declaration * visibility
+  | Sig_class of Ident.t * class_declaration * rec_status * visibility
+  | Sig_class_type of Ident.t * class_type_declaration * rec_status * visibility
+
+and module_declaration = Types.module_declaration =
+  {
+    md_type: module_type;
+    md_attributes: Parsetree.attributes;
+    md_loc: Location.t;
+    md_uid: Types.Uid.t;
+  }
+
+and modtype_declaration = Types.modtype_declaration =
+  {
+    mtd_type: module_type option;  (* None: abstract *)
+    mtd_attributes: Parsetree.attributes;
+    mtd_loc: Location.t;
+    mtd_uid: Types.Uid.t;
+  }
+
+and rec_status = Types.rec_status =
+    Trec_not                   (* first in a nonrecursive group *)
+  | Trec_first                 (* first in a recursive group *)
+  | Trec_next                  (* not first in a recursive/nonrecursive group *)
+
+and ext_status = Types.ext_status =
+    Text_first                     (* first constructor in an extension *)
+  | Text_next                      (* not first constructor in an extension *)
+  | Text_exception
+
+
+(* Constructor and record label descriptions inserted held in typing
+   environments *)
+
+type constructor_description = Types.constructor_description =
+  { cstr_name: string;                  (* Constructor name *)
+    cstr_res: type_expr;                (* Type of the result *)
+    cstr_existentials: type_expr list;  (* list of existentials *)
+    cstr_args: type_expr list;          (* Type of the arguments *)
+    cstr_arity: int;                    (* Number of arguments *)
+    cstr_tag: constructor_tag;          (* Tag for heap blocks *)
+    cstr_consts: int;                   (* Number of constant constructors *)
+    cstr_nonconsts: int;                (* Number of non-const constructors *)
+    cstr_generalized: bool;             (* Constrained return type? *)
+    cstr_private: Asttypes_.private_flag;         (* Read-only constructor? *)
+    cstr_loc: Location.t;
+    cstr_attributes: Parsetree.attributes;
+    cstr_inlined: type_declaration option;
+    cstr_uid: Types.Uid.t;
+   }
+
+and constructor_tag = Types.constructor_tag =
+    Cstr_constant of int                (* Constant constructor (an int) *)
+  | Cstr_block of int                   (* Regular constructor (a block) *)
+  | Cstr_unboxed                        (* Constructor of an unboxed type *)
+  | Cstr_extension of Path.t * bool     (* Extension constructor
+                                           true if a constant false if a block*)
+
+type label_description = Types.label_description =
+  { lbl_name: string;                   (* Short name *)
+    lbl_res: type_expr;                 (* Type of the result *)
+    lbl_arg: type_expr;                 (* Type of the argument *)
+    lbl_mut: Asttypes_.mutable_flag;              (* Is this a mutable field? *)
+    lbl_pos: int;                       (* Position in block *)
+    lbl_all: label_description array;   (* All the labels in this type *)
+    lbl_repres: record_representation;  (* Representation for this record *)
+    lbl_private: Asttypes_.private_flag;          (* Read-only field? *)
+    lbl_loc: Location.t;
+    lbl_attributes: Parsetree.attributes;
+    lbl_uid: Types.Uid.t;
+  }
+
+let pp_signature _fmt _x = ()
+
+end
+
 module Typedtree_ = struct
-type structure = Typedtree.structure
+module T = Typedtree
+
+type 'a loc = 'a Location_.loc
+[@@deriving show]
+
+type partial = T.partial =
+  Partial | Total
+
+(** {1 Extension points} *)
+
+type attribute = Parsetree.attribute
+type attributes = attribute list
+
+(** {1 Core language} *)
+
+type value = T.value = Value_pattern
+type computation = T.computation = Computation_pattern
+
+type 'a pattern_category = 'a T.pattern_category =
+| Value : value pattern_category
+| Computation : computation pattern_category
+
+type pattern = value general_pattern
+and 'k general_pattern = 'k pattern_desc pattern_data
+
+and 'a pattern_data = 'a T.pattern_data =
+  { pat_desc: 'a;
+    pat_loc: Location.t;
+    pat_extra : (pat_extra * Location.t * attributes) list;
+    pat_type: Types.type_expr;
+    pat_env: Env.t;
+    pat_attributes: attributes;
+   }
+
+and pat_extra = T.pat_extra =
+  | Tpat_constraint of core_type
+        (** P : T          { pat_desc = P
+                           ; pat_extra = (Tpat_constraint T, _, _) :: ... }
+         *)
+  | Tpat_type of Path.t * Longident.t loc
+        (** #tconst        { pat_desc = disjunction
+                           ; pat_extra = (Tpat_type (P, "tconst"), _, _) :: ...}
+
+                           where [disjunction] is a [Tpat_or _] representing the
+                           branches of [tconst].
+         *)
+  | Tpat_open of Path.t * Longident.t loc * Env.t
+  | Tpat_unpack
+        (** (module P)     { pat_desc  = Tpat_var "P"
+                           ; pat_extra = (Tpat_unpack, _, _) :: ... }
+         *)
+
+and 'k pattern_desc = 'k T.pattern_desc =
+  (* value patterns *)
+  | Tpat_any : value pattern_desc
+        (** _ *)
+  | Tpat_var : Ident.t * string loc -> value pattern_desc
+        (** x *)
+  | Tpat_alias :
+      value general_pattern * Ident.t * string loc -> value pattern_desc
+        (** P as a *)
+  | Tpat_constant : Asttypes_.constant -> value pattern_desc
+        (** 1, 'a', "true", 1.0, 1l, 1L, 1n *)
+  | Tpat_tuple : value general_pattern list -> value pattern_desc
+        (** (P1, ..., Pn)
+
+            Invariant: n >= 2
+         *)
+  | Tpat_construct :
+      Longident.t loc * Types.constructor_description *
+        value general_pattern list * (Ident.t loc list * core_type) option ->
+      value pattern_desc
+        (** C                             ([], None)
+            C P                           ([P], None)
+            C (P1, ..., Pn)               ([P1; ...; Pn], None)
+            C (P : t)                     ([P], Some ([], t))
+            C (P1, ..., Pn : t)           ([P1; ...; Pn], Some ([], t))
+            C (type a) (P : t)            ([P], Some ([a], t))
+            C (type a) (P1, ..., Pn : t)  ([P1; ...; Pn], Some ([a], t))
+          *)
+  | Tpat_variant :
+      Asttypes_.label * value general_pattern option * Types.row_desc ref ->
+      value pattern_desc
+        (** `A             (None)
+            `A P           (Some P)
+
+            See {!Types.row_desc} for an explanation of the last parameter.
+         *)
+  | Tpat_record :
+      (Longident.t loc * Types.label_description * value general_pattern) list *
+        Asttypes_.closed_flag ->
+      value pattern_desc
+        (** { l1=P1; ...; ln=Pn }     (flag = Closed)
+            { l1=P1; ...; ln=Pn; _}   (flag = Open)
+
+            Invariant: n > 0
+         *)
+  | Tpat_array : value general_pattern list -> value pattern_desc
+        (** [| P1; ...; Pn |] *)
+  | Tpat_lazy : value general_pattern -> value pattern_desc
+        (** lazy P *)
+  (* computation patterns *)
+  | Tpat_value : T.tpat_value_argument -> computation pattern_desc
+        (** P
+
+            Invariant: Tpat_value pattern should not carry
+            pat_attributes or pat_extra metadata coming from user
+            syntax, which must be on the inner pattern node -- to
+            facilitate searching for a certain value pattern
+            constructor with a specific attributed.
+
+            To enforce this restriction, we made the argument of
+            the Tpat_value constructor a private synonym of [pattern],
+            requiring you to use the [as_computation_pattern] function
+            below instead of using the [Tpat_value] constructor directly.
+         *)
+  | Tpat_exception : value general_pattern -> computation pattern_desc
+        (** exception P *)
+  (* generic constructions *)
+  | Tpat_or :
+      'k general_pattern * 'k general_pattern * Types.row_desc option ->
+      'k pattern_desc
+        (** P1 | P2
+
+            [row_desc] = [Some _] when translating [Ppat_type _],
+                         [None] otherwise.
+         *)
+
+(* and tpat_value_argument = private value general_pattern *)
+
+and expression = T.expression =
+  { exp_desc: expression_desc;
+    exp_loc: Location.t;
+    exp_extra: (exp_extra * Location.t * attributes) list;
+    exp_type: Types.type_expr;
+    exp_env: Env.t;
+    exp_attributes: attributes;
+   }
+
+and exp_extra = T.exp_extra =
+  | Texp_constraint of core_type
+        (** E : T *)
+  | Texp_coerce of core_type option * core_type
+        (** E :> T           [Texp_coerce (None, T)]
+            E : T0 :> T      [Texp_coerce (Some T0, T)]
+         *)
+  | Texp_poly of core_type option
+        (** Used for method bodies. *)
+  | Texp_newtype of string
+        (** fun (type t) ->  *)
+
+and expression_desc = T.expression_desc =
+    Texp_ident of Path.t * Longident.t loc * Types.value_description
+        (** x
+            M.x
+         *)
+  | Texp_constant of Asttypes_.constant
+        (** 1, 'a', "true", 1.0, 1l, 1L, 1n *)
+  | Texp_let of Asttypes_.rec_flag * value_binding list * expression
+        (** let P1 = E1 and ... and Pn = EN in E       (flag = Nonrecursive)
+            let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
+         *)
+  | Texp_function of { arg_label : Asttypes_.arg_label; param : Ident.t;
+      cases : value case list; partial : partial; }
+        (** [Pexp_fun] and [Pexp_function] both translate to [Texp_function].
+            See {!Parsetree} for more details.
+
+            [param] is the identifier that is to be used to name the
+            parameter of the function.
+
+            partial =
+              [Partial] if the pattern match is partial
+              [Total] otherwise.
+         *)
+  | Texp_apply of expression * (Asttypes_.arg_label * expression option) list
+        (** E0 ~l1:E1 ... ~ln:En
+
+            The expression can be None if the expression is abstracted over
+            this argument. It currently appears when a label is applied.
+
+            For example:
+            let f x ~y = x + y in
+            f ~y:3
+
+            The resulting typedtree for the application is:
+            Texp_apply (Texp_ident "f/1037",
+                        [(Nolabel, None);
+                         (Labelled "y", Some (Texp_constant Const_int 3))
+                        ])
+         *)
+  | Texp_match of expression * computation case list * partial
+        (** match E0 with
+            | P1 -> E1
+            | P2 | exception P3 -> E2
+            | exception P4 -> E3
+
+            [Texp_match (E0, [(P1, E1); (P2 | exception P3, E2);
+                              (exception P4, E3)], _)]
+         *)
+  | Texp_try of expression * value case list
+        (** try E with P1 -> E1 | ... | PN -> EN *)
+  | Texp_tuple of expression list
+        (** (E1, ..., EN) *)
+  | Texp_construct of
+      Longident.t loc * Types.constructor_description * expression list
+        (** C                []
+            C E              [E]
+            C (E1, ..., En)  [E1;...;En]
+         *)
+  | Texp_variant of Asttypes_.label * expression option
+  | Texp_record of {
+      fields : ( Types.label_description * record_label_definition ) array;
+      representation : Types.record_representation;
+      extended_expression : expression option;
+    }
+        (** { l1=P1; ...; ln=Pn }           (extended_expression = None)
+            { E0 with l1=P1; ...; ln=Pn }   (extended_expression = Some E0)
+
+            Invariant: n > 0
+
+            If the type is { l1: t1; l2: t2 }, the expression
+            { E0 with t2=P2 } is represented as
+            Texp_record
+              { fields = [| l1, Kept t1; l2 Override P2 |]; representation;
+                extended_expression = Some E0 }
+        *)
+  | Texp_field of expression * Longident.t loc * Types.label_description
+  | Texp_setfield of
+      expression * Longident.t loc * Types.label_description * expression
+  | Texp_array of expression list
+  | Texp_ifthenelse of expression * expression * expression option
+  | Texp_sequence of expression * expression
+  | Texp_while of expression * expression
+  | Texp_for of
+      Ident.t * Parsetree.pattern * expression * expression * Asttypes_.direction_flag *
+        expression
+  | Texp_send of expression * meth
+  | Texp_new of Path.t * Longident.t loc * Types.class_declaration
+  | Texp_instvar of Path.t * Path.t * string loc
+  | Texp_setinstvar of Path.t * Path.t * string loc * expression
+  | Texp_override of Path.t * (Ident.t * string loc * expression) list
+  | Texp_letmodule of
+      Ident.t option * string option loc * Types.module_presence * module_expr *
+        expression
+  | Texp_letexception of extension_constructor * expression
+  | Texp_assert of expression
+  | Texp_lazy of expression
+  | Texp_object of class_structure * string list
+  | Texp_pack of module_expr
+  | Texp_letop of {
+      let_ : binding_op;
+      ands : binding_op list;
+      param : Ident.t;
+      body : value case;
+      partial : partial;
+    }
+  | Texp_unreachable
+  | Texp_extension_constructor of Longident.t loc * Path.t
+  | Texp_open of open_declaration * expression
+        (** let open[!] M in e *)
+
+and meth = T.meth =
+    Tmeth_name of string
+  | Tmeth_val of Ident.t
+  | Tmeth_ancestor of Ident.t * Path.t
+
+and 'k case = 'k T.case =
+    {
+     c_lhs: 'k general_pattern;
+     c_guard: expression option;
+     c_rhs: expression;
+    }
+
+and record_label_definition = T.record_label_definition =
+  | Kept of Types.type_expr
+  | Overridden of Longident.t loc * expression
+
+and binding_op = T.binding_op =
+  {
+    bop_op_path : Path.t;
+    bop_op_name : string loc;
+    bop_op_val : Types.value_description;
+    bop_op_type : Types.type_expr;
+    (* This is the type at which the operator was used.
+       It is always an instance of [bop_op_val.val_type] *)
+    bop_exp : expression;
+    bop_loc : Location.t;
+  }
+
+(* Value expressions for the class language *)
+
+and class_expr = T.class_expr =
+    {
+     cl_desc: class_expr_desc;
+     cl_loc: Location.t;
+     cl_type: Types.class_type;
+     cl_env: Env.t;
+     cl_attributes: attributes;
+    }
+
+and class_expr_desc = T.class_expr_desc =
+    Tcl_ident of Path.t * Longident.t loc * core_type list
+  | Tcl_structure of class_structure
+  | Tcl_fun of
+      Asttypes_.arg_label * pattern * (Ident.t * expression) list
+      * class_expr * partial
+  | Tcl_apply of class_expr * (Asttypes_.arg_label * expression option) list
+  | Tcl_let of Asttypes_.rec_flag * value_binding list *
+                  (Ident.t * expression) list * class_expr
+  | Tcl_constraint of
+      class_expr * class_type option * string list * string list
+      * Types.MethSet.t
+  (* Visible instance variables, methods and concrete methods *)
+  | Tcl_open of open_description * class_expr
+
+and class_structure = T.class_structure =
+  {
+   cstr_self: pattern;
+   cstr_fields: class_field list;
+   cstr_type: Types.class_signature;
+   cstr_meths: Ident.t Types.Meths.t;
+  }
+
+and class_field = T.class_field =
+   {
+    cf_desc: class_field_desc;
+    cf_loc: Location.t;
+    cf_attributes: attributes;
+  }
+
+and class_field_kind = T.class_field_kind =
+  | Tcfk_virtual of core_type
+  | Tcfk_concrete of Asttypes_.override_flag * expression
+
+and class_field_desc = T.class_field_desc =
+    Tcf_inherit of
+      Asttypes_.override_flag * class_expr * string option * (string * Ident.t) list *
+        (string * Ident.t) list
+    (* Inherited instance variables and concrete methods *)
+  | Tcf_val of string loc * Asttypes_.mutable_flag * Ident.t * class_field_kind * bool
+  | Tcf_method of string loc * Asttypes_.private_flag * class_field_kind
+  | Tcf_constraint of core_type * core_type
+  | Tcf_initializer of expression
+  | Tcf_attribute of attribute
+
+(* Value expressions for the module language *)
+
+and module_expr = T.module_expr =
+  { mod_desc: module_expr_desc;
+    mod_loc: Location.t;
+    mod_type: Types.module_type;
+    mod_env: Env.t;
+    mod_attributes: attributes;
+   }
+
+(** Annotations for [Tmod_constraint]. *)
+and module_type_constraint = T.module_type_constraint =
+  | Tmodtype_implicit
+  (** The module type constraint has been synthesized during typechecking. *)
+  | Tmodtype_explicit of module_type
+  (** The module type was in the source file. *)
+
+and functor_parameter = T.functor_parameter =
+  | Unit
+  | Named of Ident.t option * string option loc * module_type
+
+and module_expr_desc = T.module_expr_desc =
+    Tmod_ident of Path.t * Longident.t loc
+  | Tmod_structure of structure
+  | Tmod_functor of functor_parameter * module_expr
+  | Tmod_apply of module_expr * module_expr * module_coercion
+  | Tmod_constraint of
+      module_expr * Types.module_type * module_type_constraint * module_coercion
+    (** ME          (constraint = Tmodtype_implicit)
+        (ME : MT)   (constraint = Tmodtype_explicit MT)
+     *)
+  | Tmod_unpack of expression * Types.module_type
+
+and structure = T.structure = {
+  str_items : structure_item list;
+  str_type : Types.signature;
+  str_final_env : Env.t;
+}
+
+and structure_item = T.structure_item =
+  { str_desc : structure_item_desc;
+    str_loc : Location.t;
+    str_env : Env.t
+  }
+
+and structure_item_desc = T.structure_item_desc =
+    Tstr_eval of expression * attributes
+  | Tstr_value of Asttypes_.rec_flag * value_binding list
+  | Tstr_primitive of value_description
+  | Tstr_type of Asttypes_.rec_flag * type_declaration list
+  | Tstr_typext of type_extension
+  | Tstr_exception of type_exception
+  | Tstr_module of module_binding
+  | Tstr_recmodule of module_binding list
+  | Tstr_modtype of module_type_declaration
+  | Tstr_open of open_declaration
+  | Tstr_class of (class_declaration * string list) list
+  | Tstr_class_type of (Ident.t * string loc * class_type_declaration) list
+  | Tstr_include of include_declaration
+  | Tstr_attribute of attribute
+
+and module_binding = T.module_binding =
+    {
+     mb_id: Ident.t option;
+     mb_name: string option loc;
+     mb_presence: Types.module_presence;
+     mb_expr: module_expr;
+     mb_attributes: attributes;
+     mb_loc: Location.t;
+    }
+
+and value_binding = T.value_binding =
+  {
+    vb_pat: pattern;
+    vb_expr: expression;
+    vb_attributes: attributes;
+    vb_loc: Location.t;
+  }
+
+and module_coercion = T.module_coercion =
+    Tcoerce_none
+  | Tcoerce_structure of (int * module_coercion) list *
+                         (Ident.t * int * module_coercion) list
+  | Tcoerce_functor of module_coercion * module_coercion
+  | Tcoerce_primitive of primitive_coercion
+  | Tcoerce_alias of Env.t * Path.t * module_coercion
+
+and module_type = T.module_type =
+  { mty_desc: module_type_desc;
+    mty_type : Types.module_type;
+    mty_env : Env.t;
+    mty_loc: Location.t;
+    mty_attributes: attributes;
+   }
+
+and module_type_desc = T.module_type_desc =
+    Tmty_ident of Path.t * Longident.t loc
+  | Tmty_signature of signature
+  | Tmty_functor of functor_parameter * module_type
+  | Tmty_with of module_type * (Path.t * Longident.t loc * with_constraint) list
+  | Tmty_typeof of module_expr
+  | Tmty_alias of Path.t * Longident.t loc
+
+and primitive_coercion = T.primitive_coercion =
+  {
+    pc_desc: Primitive.description;
+    pc_type: Types.type_expr;
+    pc_env: Env.t;
+    pc_loc : Location.t;
+  }
+
+and signature = T.signature = {
+  sig_items : signature_item list;
+  sig_type : Types.signature;
+  sig_final_env : Env.t;
+}
+
+and signature_item = T.signature_item =
+  { sig_desc: signature_item_desc;
+    sig_env : Env.t; (* BINANNOT ADDED *)
+    sig_loc: Location.t }
+
+and signature_item_desc = T.signature_item_desc =
+    Tsig_value of value_description
+  | Tsig_type of Asttypes_.rec_flag * type_declaration list
+  | Tsig_typesubst of type_declaration list
+  | Tsig_typext of type_extension
+  | Tsig_exception of type_exception
+  | Tsig_module of module_declaration
+  | Tsig_modsubst of module_substitution
+  | Tsig_recmodule of module_declaration list
+  | Tsig_modtype of module_type_declaration
+  | Tsig_modtypesubst of module_type_declaration
+  | Tsig_open of open_description
+  | Tsig_include of include_description
+  | Tsig_class of class_description list
+  | Tsig_class_type of class_type_declaration list
+  | Tsig_attribute of attribute
+
+and module_declaration = T.module_declaration =
+    {
+     md_id: Ident.t option;
+     md_name: string option loc;
+     md_presence: Types.module_presence;
+     md_type: module_type;
+     md_attributes: attributes;
+     md_loc: Location.t;
+    }
+
+and module_substitution = T.module_substitution =
+    {
+     ms_id: Ident.t;
+     ms_name: string loc;
+     ms_manifest: Path.t;
+     ms_txt: Longident.t loc;
+     ms_attributes: attributes;
+     ms_loc: Location.t;
+    }
+
+and module_type_declaration = T.module_type_declaration =
+    {
+     mtd_id: Ident.t;
+     mtd_name: string loc;
+     mtd_type: module_type option;
+     mtd_attributes: attributes;
+     mtd_loc: Location.t;
+    }
+
+and 'a open_infos = 'a T.open_infos =
+    {
+     open_expr: 'a;
+     open_bound_items: Types.signature;
+     open_override: Asttypes_.override_flag;
+     open_env: Env.t;
+     open_loc: Location.t;
+     open_attributes: attribute list;
+    }
+
+and open_description = (Path.t * Longident.t loc) open_infos
+
+and open_declaration = module_expr open_infos
+
+
+and 'a include_infos = 'a T.include_infos =
+    {
+     incl_mod: 'a;
+     incl_type: Types.signature;
+     incl_loc: Location.t;
+     incl_attributes: attribute list;
+    }
+
+and include_description = module_type include_infos
+
+and include_declaration = module_expr include_infos
+
+and with_constraint = T.with_constraint =
+    Twith_type of type_declaration
+  | Twith_module of Path.t * Longident.t loc
+  | Twith_modtype of module_type
+  | Twith_typesubst of type_declaration
+  | Twith_modsubst of Path.t * Longident.t loc
+  | Twith_modtypesubst of module_type
+
+and core_type = T.core_type =
+  { mutable ctyp_desc : core_type_desc;
+      (** mutable because of [Typeclass.declare_method] *)
+    mutable ctyp_type : Types.type_expr;
+      (** mutable because of [Typeclass.declare_method] *)
+    ctyp_env : Env.t; (* BINANNOT ADDED *)
+    ctyp_loc : Location.t;
+    ctyp_attributes: attributes;
+   }
+
+and core_type_desc = T.core_type_desc =
+    Ttyp_any
+  | Ttyp_var of string
+  | Ttyp_arrow of Asttypes_.arg_label * core_type * core_type
+  | Ttyp_tuple of core_type list
+  | Ttyp_constr of Path.t * Longident.t loc * core_type list
+  | Ttyp_object of object_field list * Asttypes_.closed_flag
+  | Ttyp_class of Path.t * Longident.t loc * core_type list
+  | Ttyp_alias of core_type * string
+  | Ttyp_variant of row_field list * Asttypes_.closed_flag * Asttypes_.label list option
+  | Ttyp_poly of string list * core_type
+  | Ttyp_package of package_type
+
+and package_type = T.package_type = {
+  pack_path : Path.t;
+  pack_fields : (Longident.t loc * core_type) list;
+  pack_type : Types.module_type;
+  pack_txt : Longident.t loc;
+}
+
+and row_field = T.row_field = {
+  rf_desc : row_field_desc;
+  rf_loc : Location.t;
+  rf_attributes : attributes;
+}
+
+and row_field_desc = T.row_field_desc =
+    Ttag of string loc * bool * core_type list
+  | Tinherit of core_type
+
+and object_field = T.object_field = {
+  of_desc : object_field_desc;
+  of_loc : Location.t;
+  of_attributes : attributes;
+}
+
+and object_field_desc = T.object_field_desc =
+  | OTtag of string loc * core_type
+  | OTinherit of core_type
+
+and value_description = T.value_description =
+  { val_id: Ident.t;
+    val_name: string loc;
+    val_desc: core_type;
+    val_val: Types.value_description;
+    val_prim: string list;
+    val_loc: Location.t;
+    val_attributes: attributes;
+    }
+
+and type_declaration = T.type_declaration =
+  {
+    typ_id: Ident.t;
+    typ_name: string loc;
+    typ_params: (core_type * (Asttypes_.variance * Asttypes_.injectivity)) list;
+    typ_type: Types.type_declaration;
+    typ_cstrs: (core_type * core_type * Location.t) list;
+    typ_kind: type_kind;
+    typ_private: Asttypes_.private_flag;
+    typ_manifest: core_type option;
+    typ_loc: Location.t;
+    typ_attributes: attributes;
+   }
+
+and type_kind = T.type_kind =
+    Ttype_abstract
+  | Ttype_variant of constructor_declaration list
+  | Ttype_record of label_declaration list
+  | Ttype_open
+
+and label_declaration = T.label_declaration =
+    {
+     ld_id: Ident.t;
+     ld_name: string loc;
+     ld_mutable: Asttypes_.mutable_flag;
+     ld_type: core_type;
+     ld_loc: Location.t;
+     ld_attributes: attributes;
+    }
+
+and constructor_declaration = T.constructor_declaration =
+    {
+     cd_id: Ident.t;
+     cd_name: string loc;
+     cd_vars: string loc list;
+     cd_args: constructor_arguments;
+     cd_res: core_type option;
+     cd_loc: Location.t;
+     cd_attributes: attributes;
+    }
+
+and constructor_arguments = T.constructor_arguments =
+  | Cstr_tuple of core_type list
+  | Cstr_record of label_declaration list
+
+and type_extension = T.type_extension =
+  {
+    tyext_path: Path.t;
+    tyext_txt: Longident.t loc;
+    tyext_params: (core_type * (Asttypes_.variance * Asttypes_.injectivity)) list;
+    tyext_constructors: extension_constructor list;
+    tyext_private: Asttypes_.private_flag;
+    tyext_loc: Location.t;
+    tyext_attributes: attributes;
+  }
+
+and type_exception = T.type_exception =
+  {
+    tyexn_constructor: extension_constructor;
+    tyexn_loc: Location.t;
+    tyexn_attributes: attribute list;
+  }
+
+and extension_constructor = T.extension_constructor =
+  {
+    ext_id: Ident.t;
+    ext_name: string loc;
+    ext_type : Types.extension_constructor;
+    ext_kind : extension_constructor_kind;
+    ext_loc : Location.t;
+    ext_attributes: attributes;
+  }
+
+and extension_constructor_kind = T.extension_constructor_kind =
+    Text_decl of string loc list * constructor_arguments * core_type option
+  | Text_rebind of Path.t * Longident.t loc
+
+and class_type = T.class_type =
+    {
+     cltyp_desc: class_type_desc;
+     cltyp_type: Types.class_type;
+     cltyp_env: Env.t;
+     cltyp_loc: Location.t;
+     cltyp_attributes: attributes;
+    }
+
+and class_type_desc = T.class_type_desc =
+    Tcty_constr of Path.t * Longident.t loc * core_type list
+  | Tcty_signature of class_signature
+  | Tcty_arrow of Asttypes_.arg_label * core_type * class_type
+  | Tcty_open of open_description * class_type
+
+and class_signature = T.class_signature = {
+    csig_self : core_type;
+    csig_fields : class_type_field list;
+    csig_type : Types.class_signature;
+  }
+
+and class_type_field = T.class_type_field = {
+    ctf_desc: class_type_field_desc;
+    ctf_loc: Location.t;
+    ctf_attributes: attributes;
+  }
+
+and class_type_field_desc = T.class_type_field_desc =
+  | Tctf_inherit of class_type
+  | Tctf_val of (string * Asttypes_.mutable_flag * Asttypes_.virtual_flag * core_type)
+  | Tctf_method of (string * Asttypes_.private_flag * Asttypes_.virtual_flag * core_type)
+  | Tctf_constraint of (core_type * core_type)
+  | Tctf_attribute of attribute
+
+and class_declaration =
+  class_expr class_infos
+
+and class_description =
+  class_type class_infos
+
+and class_type_declaration =
+  class_type class_infos
+
+and 'a class_infos = 'a T.class_infos =
+  { ci_virt: Asttypes_.virtual_flag;
+    ci_params: (core_type * (Asttypes_.variance * Asttypes_.injectivity)) list;
+    ci_id_name : string loc;
+    ci_id_class: Ident.t;
+    ci_id_class_type : Ident.t;
+    ci_id_object : Ident.t;
+    ci_id_typehash : Ident.t;
+    ci_expr: 'a;
+    ci_decl: Types.class_declaration;
+    ci_type_decl : Types.class_type_declaration;
+    ci_loc: Location.t;
+    ci_attributes: attributes;
+   }
+
+type implementation = T.implementation = {
+  structure: structure;
+  coercion: module_coercion;
+  signature: Types.signature;
+  shape: Shape.t;
+}
+
+let pp_signature _fmt _x = ()
 let pp_structure _fmt _x = ()
 
-type signature = Typedtree.signature
-let pp_signature _fmt _x = ()
 end
 
 (*****************************************************************************)
@@ -76,8 +1307,10 @@ module Cmt_format_ = struct
 
 type binary_annots = Cmt_format.binary_annots =
   | Packed of Types_.signature * string list
+
   | Implementation of Typedtree_.structure
   | Interface of Typedtree_.signature
+
   | Partial_implementation of binary_part array
   | Partial_interface of binary_part array
 
