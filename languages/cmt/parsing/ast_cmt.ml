@@ -646,7 +646,7 @@ and 'k pattern_desc = 'k T.pattern_desc =
   | Tpat_lazy : value general_pattern -> value pattern_desc
         (** lazy P *)
   (* computation patterns *)
-  | Tpat_value : T.tpat_value_argument -> computation pattern_desc
+  | Tpat_value : tpat_value_argument -> computation pattern_desc
         (** P
 
             Invariant: Tpat_value pattern should not carry
@@ -672,7 +672,7 @@ and 'k pattern_desc = 'k T.pattern_desc =
                          [None] otherwise.
          *)
 
-(* and tpat_value_argument = private value general_pattern *)
+and tpat_value_argument = (* private value general_pattern  *) T.tpat_value_argument
 
 and expression = T.expression =
   { exp_desc: expression_desc;
