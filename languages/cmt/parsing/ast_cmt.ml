@@ -64,6 +64,13 @@ let pp_loc _fmt _ofa _x = ()
 
 end
 
+module Longident_ = struct
+
+type t = Longident.t
+let pp _fmt _x = ()
+
+end
+
 module Ident_ = struct
 
 type t = Ident.t
@@ -78,6 +85,17 @@ let pp _fmt _x = ()
 
 end
 
+module Primitive_ = struct
+  type description = Primitive.description
+  let pp_description _fmt _x = ()
+end
+
+module Type_immediacy_ = struct
+
+type t = Type_immediacy.t
+let pp _fmt _x = ()
+
+end
 
 module Env_ = struct
 
@@ -149,14 +167,61 @@ type injectivity = Asttypes.injectivity =
 
 end
 
+module Parsetree_ = struct
+module P = Parsetree
+
+type pattern = P.pattern
+let pp_pattern _fmt _x = ()
+
+type attribute = P.attribute
+let pp_attribute _fmt _x = ()
+
+type attributes = P.attributes
+let pp_attributes _fmt _x = ()
+
+end
+
 
 module Types_ = struct
 
+module Uid_ = struct
+  type t = Types.Uid.t
+  let pp _fmt _x = ()
+end
+
+module Vars_ = struct
+ type 'a t = 'a Types.Vars.t
+ let pp _fmt _of_a _x = ()  
+end
+
+module Meths_ = struct
+ type 'a t = 'a Types.Meths.t
+ let pp _fmt _of_a _x = ()  
+end
+
+module Separability_ = struct
+ type t = Types.Separability.t
+ let pp _fmt _x = ()  
+end
+
+module Variance_ = struct
+ type t = Types.Variance.t
+ let pp _fmt _x = ()  
+end
+
 type type_expr = Types.type_expr
+let pp_type_expr _fmt _x = ()
+
 type row_desc = Types.row_desc
+let pp_row_desc _fmt _x = ()
+
 type row_field = Types.row_field
+let pp_row_field _fmt _x = ()
 type field_kind = Types.field_kind
+let pp_field_kind _fmt _x = ()
+
 type commutable = Types.commutable
+let pp_commutable _fmt _x = ()
 
 type type_desc = Types.type_desc =
   | Tvar of string option
@@ -173,11 +238,11 @@ type type_desc = Types.type_desc =
   | Ttuple of type_expr list
   (** [Ttuple [t1;...;tn]] ==> [(t1 * ... * tn)] *)
 
-  | Tconstr of Path.t * type_expr list * abbrev_memo ref
+  | Tconstr of Path_.t * type_expr list * abbrev_memo ref
   (** [Tconstr (`A.B.t', [t1;...;tn], _)] ==> [(t1,...,tn) A.B.t]
       The last parameter keep tracks of known expansions, see [abbrev_memo]. *)
 
-  | Tobject of type_expr * (Path.t * type_expr list) option ref
+  | Tobject of type_expr * (Path_.t * type_expr list) option ref
   (** [Tobject (`f1:t1;...;fn: tn', `None')] ==> [< f1: t1; ...; fn: tn >]
       f1, fn are represented as a linked list of types using Tfield and Tnil
       constructors.
@@ -226,13 +291,13 @@ type type_desc = Types.type_desc =
       where 'a1 ... 'an are names given to types in tyl
       and occurrences of those types in ty. *)
 
-  | Tpackage of Path.t * (Longident.t * type_expr) list
+  | Tpackage of Path_.t * (Longident_.t * type_expr) list
   (** Type of a first-class module (a.k.a package). *)
 
 and fixed_explanation = Types.fixed_explanation =
   | Univar of type_expr (** The row type was bound to an univar *)
   | Fixed_private (** The row type is private *)
-  | Reified of Path.t (** The row was reified *)
+  | Reified of Path_.t (** The row was reified *)
   | Rigid (** The row type was made rigid during constraint verification *)
 
 (** [abbrev_memo] allows one to keep track of different expansions of a type
@@ -253,7 +318,7 @@ and fixed_explanation = Types.fixed_explanation =
 and abbrev_memo = Types.abbrev_memo =
   | Mnil (** No known abbreviation *)
 
-  | Mcons of Asttypes_.private_flag * Path.t * type_expr * type_expr * abbrev_memo
+  | Mcons of Asttypes_.private_flag * Path_.t * type_expr * type_expr * abbrev_memo
   (** Found one abbreviation.
       A valid abbreviation should be at least as visible and reachable by the
       same path.
@@ -261,6 +326,7 @@ and abbrev_memo = Types.abbrev_memo =
 
   | Mlink of abbrev_memo ref
   (** Abbreviations can be found after this indirection *)
+[@@deriving show]
 
 
 
@@ -268,6 +334,7 @@ type field_kind_view = Types.field_kind_view =
     Fprivate
   | Fpublic
   | Fabsent
+[@@deriving show]
 
 (** Transient [type_expr].
     Should only be used immediately after [Transient_expr.repr] *)
@@ -276,6 +343,7 @@ type transient_expr = Types.transient_expr = private
         mutable level: int;
         mutable scope: int;
         id: int }
+[@@deriving show]
 
 (** get all fields at once; different from the old [row_repr] *)
 type row_desc_repr = Types.row_desc_repr =
@@ -283,7 +351,8 @@ type row_desc_repr = Types.row_desc_repr =
              more:   type_expr;
              closed: bool;
              fixed:  fixed_explanation option;
-             name:   (Path.t * type_expr list) option }
+             name:   (Path_.t * type_expr list) option }
+[@@deriving show]
 
 (** Current contents of a row field *)
 type row_field_view = Types.row_field_view =
@@ -293,40 +362,42 @@ type row_field_view = Types.row_field_view =
         (* 2nd true denotes a tag in a pattern matching, and
            is erased later *)
   | Rabsent
+[@@deriving show]
 
 (* Value descriptions *)
 
 type value_description = Types.value_description =
   { val_type: type_expr;                (* Type of the value *)
     val_kind: value_kind;
-    val_loc: Location.t;
-    val_attributes: Parsetree.attributes;
-    val_uid: Types.Uid.t;
+    val_loc: Location_.t;
+    val_attributes: Parsetree_.attributes;
+    val_uid: Uid_.t;
   }
 
 and value_kind = Types.value_kind =
     Val_reg                             (* Regular value *)
-  | Val_prim of Primitive.description   (* Primitive *)
+  | Val_prim of Primitive_.description   (* Primitive *)
   | Val_ivar of Asttypes_.mutable_flag * string   (* Instance variable (mutable ?) *)
-  | Val_self of class_signature * self_meths * Ident.t Types.Vars.t * string
+  | Val_self of class_signature * self_meths * Ident_.t Vars_.t * string
                                         (* Self *)
-  | Val_anc of class_signature * Ident.t Types.Meths.t * string
+  | Val_anc of class_signature * Ident_.t Meths_.t * string
                                         (* Ancestor *)
 
 and self_meths = Types.self_meths =
-  | Self_concrete of Ident.t Types.Meths.t
-  | Self_virtual of Ident.t Types.Meths.t ref
+  | Self_concrete of Ident_.t Meths_.t
+  | Self_virtual of Ident_.t Meths_.t ref
 
 and class_signature = Types.class_signature =
   { csig_self: type_expr;
     mutable csig_self_row: type_expr;
-    mutable csig_vars: (Asttypes_.mutable_flag * Asttypes_.virtual_flag * type_expr) Types.Vars.t;
-    mutable csig_meths: (method_privacy * Asttypes_.virtual_flag * type_expr) Types.Meths.t; }
+    mutable csig_vars: (Asttypes_.mutable_flag * Asttypes_.virtual_flag * type_expr) Vars_.t;
+    mutable csig_meths: (method_privacy * Asttypes_.virtual_flag * type_expr) Meths_.t; }
 
 and method_privacy = Types.method_privacy =
   | Mpublic
   | Mprivate of field_kind
     (* The [field_kind] is always [Fabsent] in a complete class type. *)
+[@@deriving show]
 
 
 
@@ -338,17 +409,17 @@ type type_declaration = Types.type_declaration =
     type_kind: type_decl_kind;
     type_private: Asttypes_.private_flag;
     type_manifest: type_expr option;
-    type_variance: Types.Variance.t list;
+    type_variance: Variance_.t list;
     (* covariant, contravariant, weakly contravariant, injective *)
-    type_separability: Types.Separability.t list;
+    type_separability: Separability_.t list;
     type_is_newtype: bool;
     type_expansion_scope: int;
-    type_loc: Location.t;
-    type_attributes: Parsetree.attributes;
-    type_immediate: Type_immediacy.t;
+    type_loc: Location_.t;
+    type_attributes: Parsetree_.attributes;
+    type_immediate: Type_immediacy_.t;
     type_unboxed_default: bool;
     (* true if the unboxed-ness of this type was chosen by a compiler flag *)
-    type_uid: Types.Uid.t;
+    type_uid: Uid_.t;
   }
 
 and type_decl_kind = (label_declaration, constructor_declaration) type_kind
@@ -364,7 +435,7 @@ and record_representation = Types.record_representation =
   | Record_float                        (* All fields are floats *)
   | Record_unboxed of bool    (* Unboxed single-field record, inlined or not *)
   | Record_inlined of int               (* Inlined record *)
-  | Record_extension of Path.t          (* Inlined record under extension *)
+  | Record_extension of Path_.t          (* Inlined record under extension *)
 
 and variant_representation = Types.variant_representation =
     Variant_regular          (* Constant or boxed constructors *)
@@ -372,88 +443,96 @@ and variant_representation = Types.variant_representation =
 
 and label_declaration = Types.label_declaration =
   {
-    ld_id: Ident.t;
+    ld_id: Ident_.t;
     ld_mutable: Asttypes_.mutable_flag;
     ld_type: type_expr;
-    ld_loc: Location.t;
-    ld_attributes: Parsetree.attributes;
-    ld_uid: Types.Uid.t;
+    ld_loc: Location_.t;
+    ld_attributes: Parsetree_.attributes;
+    ld_uid: Uid_.t;
   }
 
 and constructor_declaration = Types.constructor_declaration =
   {
-    cd_id: Ident.t;
+    cd_id: Ident_.t;
     cd_args: constructor_arguments;
     cd_res: type_expr option;
-    cd_loc: Location.t;
-    cd_attributes: Parsetree.attributes;
-    cd_uid: Types.Uid.t;
+    cd_loc: Location_.t;
+    cd_attributes: Parsetree_.attributes;
+    cd_uid: Uid_.t;
   }
 
 and constructor_arguments = Types.constructor_arguments =
   | Cstr_tuple of type_expr list
   | Cstr_record of label_declaration list
+[@@deriving show]
+
+
 
 type extension_constructor = Types.extension_constructor =
   {
-    ext_type_path: Path.t;
+    ext_type_path: Path_.t;
     ext_type_params: type_expr list;
     ext_args: constructor_arguments;
     ext_ret_type: type_expr option;
     ext_private: Asttypes_.private_flag;
-    ext_loc: Location.t;
-    ext_attributes: Parsetree.attributes;
-    ext_uid: Types.Uid.t;
+    ext_loc: Location_.t;
+    ext_attributes: Parsetree_.attributes;
+    ext_uid: Uid_.t;
   }
 
 and type_transparence = Types.type_transparence =
     Type_public      (* unrestricted expansion *)
   | Type_new         (* "new" type *)
   | Type_private     (* private type *)
+[@@deriving show]
 
 (* Type expressions for the class language *)
 
 type class_type = Types.class_type =
-    Cty_constr of Path.t * type_expr list * class_type
+    Cty_constr of Path_.t * type_expr list * class_type
   | Cty_signature of class_signature
   | Cty_arrow of Asttypes_.arg_label * type_expr * class_type
+[@@deriving show]
 
 type class_declaration = Types.class_declaration =
   { cty_params: type_expr list;
     mutable cty_type: class_type;
-    cty_path: Path.t;
+    cty_path: Path_.t;
     cty_new: type_expr option;
-    cty_variance: Types.Variance.t list;
-    cty_loc: Location.t;
-    cty_attributes: Parsetree.attributes;
-    cty_uid: Types.Uid.t;
+    cty_variance: Variance_.t list;
+    cty_loc: Location_.t;
+    cty_attributes: Parsetree_.attributes;
+    cty_uid: Uid_.t;
   }
+[@@deriving show]
 
 type class_type_declaration = Types.class_type_declaration =
   { clty_params: type_expr list;
     clty_type: class_type;
-    clty_path: Path.t;
-    clty_variance: Types.Variance.t list;
-    clty_loc: Location.t;
-    clty_attributes: Parsetree.attributes;
-    clty_uid: Types.Uid.t;
+    clty_path: Path_.t;
+    clty_variance: Variance_.t list;
+    clty_loc: Location_.t;
+    clty_attributes: Parsetree_.attributes;
+    clty_uid: Uid_.t;
   }
+[@@deriving show]
 
 (* Type expressions for the module language *)
 
 type visibility = Types.visibility =
   | Exported
   | Hidden
+[@@deriving show]
 
 type module_type = Types.module_type =
-    Mty_ident of Path.t
+    Mty_ident of Path_.t
   | Mty_signature of signature
   | Mty_functor of functor_parameter * module_type
-  | Mty_alias of Path.t
+  | Mty_alias of Path_.t
 
 and functor_parameter = Types.functor_parameter =
   | Unit
-  | Named of Ident.t option * module_type
+  | Named of Ident_.t option * module_type
 
 and module_presence = Types.module_presence =
   | Mp_present
@@ -462,29 +541,29 @@ and module_presence = Types.module_presence =
 and signature = signature_item list
 
 and signature_item = Types.signature_item =
-    Sig_value of Ident.t * value_description * visibility
-  | Sig_type of Ident.t * type_declaration * rec_status * visibility
-  | Sig_typext of Ident.t * extension_constructor * ext_status * visibility
+    Sig_value of Ident_.t * value_description * visibility
+  | Sig_type of Ident_.t * type_declaration * rec_status * visibility
+  | Sig_typext of Ident_.t * extension_constructor * ext_status * visibility
   | Sig_module of
-      Ident.t * module_presence * module_declaration * rec_status * visibility
-  | Sig_modtype of Ident.t * modtype_declaration * visibility
-  | Sig_class of Ident.t * class_declaration * rec_status * visibility
-  | Sig_class_type of Ident.t * class_type_declaration * rec_status * visibility
+      Ident_.t * module_presence * module_declaration * rec_status * visibility
+  | Sig_modtype of Ident_.t * modtype_declaration * visibility
+  | Sig_class of Ident_.t * class_declaration * rec_status * visibility
+  | Sig_class_type of Ident_.t * class_type_declaration * rec_status * visibility
 
 and module_declaration = Types.module_declaration =
   {
     md_type: module_type;
-    md_attributes: Parsetree.attributes;
-    md_loc: Location.t;
-    md_uid: Types.Uid.t;
+    md_attributes: Parsetree_.attributes;
+    md_loc: Location_.t;
+    md_uid: Uid_.t;
   }
 
 and modtype_declaration = Types.modtype_declaration =
   {
     mtd_type: module_type option;  (* None: abstract *)
-    mtd_attributes: Parsetree.attributes;
-    mtd_loc: Location.t;
-    mtd_uid: Types.Uid.t;
+    mtd_attributes: Parsetree_.attributes;
+    mtd_loc: Location_.t;
+    mtd_uid: Uid_.t;
   }
 
 and rec_status = Types.rec_status =
@@ -496,6 +575,7 @@ and ext_status = Types.ext_status =
     Text_first                     (* first constructor in an extension *)
   | Text_next                      (* not first constructor in an extension *)
   | Text_exception
+[@@deriving show]
 
 
 (* Constructor and record label descriptions inserted held in typing
@@ -512,17 +592,18 @@ type constructor_description = Types.constructor_description =
     cstr_nonconsts: int;                (* Number of non-const constructors *)
     cstr_generalized: bool;             (* Constrained return type? *)
     cstr_private: Asttypes_.private_flag;         (* Read-only constructor? *)
-    cstr_loc: Location.t;
-    cstr_attributes: Parsetree.attributes;
+    cstr_loc: Location_.t;
+    cstr_attributes: Parsetree_.attributes;
     cstr_inlined: type_declaration option;
-    cstr_uid: Types.Uid.t;
+    cstr_uid: Uid_.t;
    }
 
 and constructor_tag = Types.constructor_tag =
     Cstr_constant of int                (* Constant constructor (an int) *)
   | Cstr_block of int                   (* Regular constructor (a block) *)
   | Cstr_unboxed                        (* Constructor of an unboxed type *)
-  | Cstr_extension of Path.t * bool     (* Extension constructor
+  | Cstr_extension of Path_.t * bool     (* Extension constructor
+[@@deriving show]
                                            true if a constant false if a block*)
 
 type label_description = Types.label_description =
@@ -534,12 +615,13 @@ type label_description = Types.label_description =
     lbl_all: label_description array;   (* All the labels in this type *)
     lbl_repres: record_representation;  (* Representation for this record *)
     lbl_private: Asttypes_.private_flag;          (* Read-only field? *)
-    lbl_loc: Location.t;
-    lbl_attributes: Parsetree.attributes;
-    lbl_uid: Types.Uid.t;
+    lbl_loc: Location_.t;
+    lbl_attributes: Parsetree_.attributes;
+    lbl_uid: Uid_.t;
   }
+[@@deriving show]
 
-let pp_signature _fmt _x = ()
+
 
 end
 
@@ -554,7 +636,7 @@ type partial = T.partial =
 
 (** {1 Extension points} *)
 
-type attribute = Parsetree.attribute
+type attribute = Parsetree_.attribute
 type attributes = attribute list
 
 (** {1 Core language} *)
@@ -571,8 +653,8 @@ and 'k general_pattern = 'k pattern_desc pattern_data
 
 and 'a pattern_data = 'a T.pattern_data =
   { pat_desc: 'a;
-    pat_loc: Location.t;
-    pat_extra : (pat_extra * Location.t * attributes) list;
+    pat_loc: Location_.t;
+    pat_extra : (pat_extra * Location_.t * attributes) list;
     pat_type: Types.type_expr;
     pat_env: Env.t;
     pat_attributes: attributes;
@@ -583,14 +665,14 @@ and pat_extra = T.pat_extra =
         (** P : T          { pat_desc = P
                            ; pat_extra = (Tpat_constraint T, _, _) :: ... }
          *)
-  | Tpat_type of Path.t * Longident.t loc
+  | Tpat_type of Path_.t * Longident_.t loc
         (** #tconst        { pat_desc = disjunction
                            ; pat_extra = (Tpat_type (P, "tconst"), _, _) :: ...}
 
                            where [disjunction] is a [Tpat_or _] representing the
                            branches of [tconst].
          *)
-  | Tpat_open of Path.t * Longident.t loc * Env.t
+  | Tpat_open of Path_.t * Longident_.t loc * Env.t
   | Tpat_unpack
         (** (module P)     { pat_desc  = Tpat_var "P"
                            ; pat_extra = (Tpat_unpack, _, _) :: ... }
@@ -600,10 +682,10 @@ and 'k pattern_desc = 'k T.pattern_desc =
   (* value patterns *)
   | Tpat_any : value pattern_desc
         (** _ *)
-  | Tpat_var : Ident.t * string loc -> value pattern_desc
+  | Tpat_var : Ident_.t * string loc -> value pattern_desc
         (** x *)
   | Tpat_alias :
-      value general_pattern * Ident.t * string loc -> value pattern_desc
+      value general_pattern * Ident_.t * string loc -> value pattern_desc
         (** P as a *)
   | Tpat_constant : Asttypes_.constant -> value pattern_desc
         (** 1, 'a', "true", 1.0, 1l, 1L, 1n *)
@@ -613,8 +695,8 @@ and 'k pattern_desc = 'k T.pattern_desc =
             Invariant: n >= 2
          *)
   | Tpat_construct :
-      Longident.t loc * Types.constructor_description *
-        value general_pattern list * (Ident.t loc list * core_type) option ->
+      Longident_.t loc * Types.constructor_description *
+        value general_pattern list * (Ident_.t loc list * core_type) option ->
       value pattern_desc
         (** C                             ([], None)
             C P                           ([P], None)
@@ -633,7 +715,7 @@ and 'k pattern_desc = 'k T.pattern_desc =
             See {!Types.row_desc} for an explanation of the last parameter.
          *)
   | Tpat_record :
-      (Longident.t loc * Types.label_description * value general_pattern) list *
+      (Longident_.t loc * Types.label_description * value general_pattern) list *
         Asttypes_.closed_flag ->
       value pattern_desc
         (** { l1=P1; ...; ln=Pn }     (flag = Closed)
@@ -676,8 +758,8 @@ and tpat_value_argument = (* private value general_pattern  *) T.tpat_value_argu
 
 and expression = T.expression =
   { exp_desc: expression_desc;
-    exp_loc: Location.t;
-    exp_extra: (exp_extra * Location.t * attributes) list;
+    exp_loc: Location_.t;
+    exp_extra: (exp_extra * Location_.t * attributes) list;
     exp_type: Types.type_expr;
     exp_env: Env.t;
     exp_attributes: attributes;
@@ -696,7 +778,7 @@ and exp_extra = T.exp_extra =
         (** fun (type t) ->  *)
 
 and expression_desc = T.expression_desc =
-    Texp_ident of Path.t * Longident.t loc * Types.value_description
+    Texp_ident of Path_.t * Longident_.t loc * Types.value_description
         (** x
             M.x
          *)
@@ -706,7 +788,7 @@ and expression_desc = T.expression_desc =
         (** let P1 = E1 and ... and Pn = EN in E       (flag = Nonrecursive)
             let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
          *)
-  | Texp_function of { arg_label : Asttypes_.arg_label; param : Ident.t;
+  | Texp_function of { arg_label : Asttypes_.arg_label; param : Ident_.t;
       cases : value case list; partial : partial; }
         (** [Pexp_fun] and [Pexp_function] both translate to [Texp_function].
             See {!Parsetree} for more details.
@@ -748,7 +830,7 @@ and expression_desc = T.expression_desc =
   | Texp_tuple of expression list
         (** (E1, ..., EN) *)
   | Texp_construct of
-      Longident.t loc * Types.constructor_description * expression list
+      Longident_.t loc * Types.constructor_description * expression list
         (** C                []
             C E              [E]
             C (E1, ..., En)  [E1;...;En]
@@ -770,23 +852,23 @@ and expression_desc = T.expression_desc =
               { fields = [| l1, Kept t1; l2 Override P2 |]; representation;
                 extended_expression = Some E0 }
         *)
-  | Texp_field of expression * Longident.t loc * Types.label_description
+  | Texp_field of expression * Longident_.t loc * Types.label_description
   | Texp_setfield of
-      expression * Longident.t loc * Types.label_description * expression
+      expression * Longident_.t loc * Types.label_description * expression
   | Texp_array of expression list
   | Texp_ifthenelse of expression * expression * expression option
   | Texp_sequence of expression * expression
   | Texp_while of expression * expression
   | Texp_for of
-      Ident.t * Parsetree.pattern * expression * expression * Asttypes_.direction_flag *
+      Ident_.t * Parsetree_.pattern * expression * expression * Asttypes_.direction_flag *
         expression
   | Texp_send of expression * meth
-  | Texp_new of Path.t * Longident.t loc * Types.class_declaration
-  | Texp_instvar of Path.t * Path.t * string loc
-  | Texp_setinstvar of Path.t * Path.t * string loc * expression
-  | Texp_override of Path.t * (Ident.t * string loc * expression) list
+  | Texp_new of Path_.t * Longident_.t loc * Types.class_declaration
+  | Texp_instvar of Path_.t * Path_.t * string loc
+  | Texp_setinstvar of Path_.t * Path_.t * string loc * expression
+  | Texp_override of Path_.t * (Ident_.t * string loc * expression) list
   | Texp_letmodule of
-      Ident.t option * string option loc * Types.module_presence * module_expr *
+      Ident_.t option * string option loc * Types.module_presence * module_expr *
         expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
@@ -796,19 +878,19 @@ and expression_desc = T.expression_desc =
   | Texp_letop of {
       let_ : binding_op;
       ands : binding_op list;
-      param : Ident.t;
+      param : Ident_.t;
       body : value case;
       partial : partial;
     }
   | Texp_unreachable
-  | Texp_extension_constructor of Longident.t loc * Path.t
+  | Texp_extension_constructor of Longident_.t loc * Path_.t
   | Texp_open of open_declaration * expression
         (** let open[!] M in e *)
 
 and meth = T.meth =
     Tmeth_name of string
-  | Tmeth_val of Ident.t
-  | Tmeth_ancestor of Ident.t * Path.t
+  | Tmeth_val of Ident_.t
+  | Tmeth_ancestor of Ident_.t * Path_.t
 
 and 'k case = 'k T.case =
     {
@@ -819,18 +901,18 @@ and 'k case = 'k T.case =
 
 and record_label_definition = T.record_label_definition =
   | Kept of Types.type_expr
-  | Overridden of Longident.t loc * expression
+  | Overridden of Longident_.t loc * expression
 
 and binding_op = T.binding_op =
   {
-    bop_op_path : Path.t;
+    bop_op_path : Path_.t;
     bop_op_name : string loc;
     bop_op_val : Types.value_description;
     bop_op_type : Types.type_expr;
     (* This is the type at which the operator was used.
        It is always an instance of [bop_op_val.val_type] *)
     bop_exp : expression;
-    bop_loc : Location.t;
+    bop_loc : Location_.t;
   }
 
 (* Value expressions for the class language *)
@@ -838,21 +920,21 @@ and binding_op = T.binding_op =
 and class_expr = T.class_expr =
     {
      cl_desc: class_expr_desc;
-     cl_loc: Location.t;
+     cl_loc: Location_.t;
      cl_type: Types.class_type;
      cl_env: Env.t;
      cl_attributes: attributes;
     }
 
 and class_expr_desc = T.class_expr_desc =
-    Tcl_ident of Path.t * Longident.t loc * core_type list
+    Tcl_ident of Path_.t * Longident_.t loc * core_type list
   | Tcl_structure of class_structure
   | Tcl_fun of
-      Asttypes_.arg_label * pattern * (Ident.t * expression) list
+      Asttypes_.arg_label * pattern * (Ident_.t * expression) list
       * class_expr * partial
   | Tcl_apply of class_expr * (Asttypes_.arg_label * expression option) list
   | Tcl_let of Asttypes_.rec_flag * value_binding list *
-                  (Ident.t * expression) list * class_expr
+                  (Ident_.t * expression) list * class_expr
   | Tcl_constraint of
       class_expr * class_type option * string list * string list
       * Types.MethSet.t
@@ -864,13 +946,13 @@ and class_structure = T.class_structure =
    cstr_self: pattern;
    cstr_fields: class_field list;
    cstr_type: Types.class_signature;
-   cstr_meths: Ident.t Types.Meths.t;
+   cstr_meths: Ident_.t Types.Meths.t;
   }
 
 and class_field = T.class_field =
    {
     cf_desc: class_field_desc;
-    cf_loc: Location.t;
+    cf_loc: Location_.t;
     cf_attributes: attributes;
   }
 
@@ -880,10 +962,10 @@ and class_field_kind = T.class_field_kind =
 
 and class_field_desc = T.class_field_desc =
     Tcf_inherit of
-      Asttypes_.override_flag * class_expr * string option * (string * Ident.t) list *
-        (string * Ident.t) list
+      Asttypes_.override_flag * class_expr * string option * (string * Ident_.t) list *
+        (string * Ident_.t) list
     (* Inherited instance variables and concrete methods *)
-  | Tcf_val of string loc * Asttypes_.mutable_flag * Ident.t * class_field_kind * bool
+  | Tcf_val of string loc * Asttypes_.mutable_flag * Ident_.t * class_field_kind * bool
   | Tcf_method of string loc * Asttypes_.private_flag * class_field_kind
   | Tcf_constraint of core_type * core_type
   | Tcf_initializer of expression
@@ -893,7 +975,7 @@ and class_field_desc = T.class_field_desc =
 
 and module_expr = T.module_expr =
   { mod_desc: module_expr_desc;
-    mod_loc: Location.t;
+    mod_loc: Location_.t;
     mod_type: Types.module_type;
     mod_env: Env.t;
     mod_attributes: attributes;
@@ -908,10 +990,10 @@ and module_type_constraint = T.module_type_constraint =
 
 and functor_parameter = T.functor_parameter =
   | Unit
-  | Named of Ident.t option * string option loc * module_type
+  | Named of Ident_.t option * string option loc * module_type
 
 and module_expr_desc = T.module_expr_desc =
-    Tmod_ident of Path.t * Longident.t loc
+    Tmod_ident of Path_.t * Longident_.t loc
   | Tmod_structure of structure
   | Tmod_functor of functor_parameter * module_expr
   | Tmod_apply of module_expr * module_expr * module_coercion
@@ -930,7 +1012,7 @@ and structure = T.structure = {
 
 and structure_item = T.structure_item =
   { str_desc : structure_item_desc;
-    str_loc : Location.t;
+    str_loc : Location_.t;
     str_env : Env.t
   }
 
@@ -946,18 +1028,18 @@ and structure_item_desc = T.structure_item_desc =
   | Tstr_modtype of module_type_declaration
   | Tstr_open of open_declaration
   | Tstr_class of (class_declaration * string list) list
-  | Tstr_class_type of (Ident.t * string loc * class_type_declaration) list
+  | Tstr_class_type of (Ident_.t * string loc * class_type_declaration) list
   | Tstr_include of include_declaration
   | Tstr_attribute of attribute
 
 and module_binding = T.module_binding =
     {
-     mb_id: Ident.t option;
+     mb_id: Ident_.t option;
      mb_name: string option loc;
      mb_presence: Types.module_presence;
      mb_expr: module_expr;
      mb_attributes: attributes;
-     mb_loc: Location.t;
+     mb_loc: Location_.t;
     }
 
 and value_binding = T.value_binding =
@@ -965,39 +1047,39 @@ and value_binding = T.value_binding =
     vb_pat: pattern;
     vb_expr: expression;
     vb_attributes: attributes;
-    vb_loc: Location.t;
+    vb_loc: Location_.t;
   }
 
 and module_coercion = T.module_coercion =
     Tcoerce_none
   | Tcoerce_structure of (int * module_coercion) list *
-                         (Ident.t * int * module_coercion) list
+                         (Ident_.t * int * module_coercion) list
   | Tcoerce_functor of module_coercion * module_coercion
   | Tcoerce_primitive of primitive_coercion
-  | Tcoerce_alias of Env.t * Path.t * module_coercion
+  | Tcoerce_alias of Env.t * Path_.t * module_coercion
 
 and module_type = T.module_type =
   { mty_desc: module_type_desc;
     mty_type : Types.module_type;
     mty_env : Env.t;
-    mty_loc: Location.t;
+    mty_loc: Location_.t;
     mty_attributes: attributes;
    }
 
 and module_type_desc = T.module_type_desc =
-    Tmty_ident of Path.t * Longident.t loc
+    Tmty_ident of Path_.t * Longident_.t loc
   | Tmty_signature of signature
   | Tmty_functor of functor_parameter * module_type
-  | Tmty_with of module_type * (Path.t * Longident.t loc * with_constraint) list
+  | Tmty_with of module_type * (Path_.t * Longident_.t loc * with_constraint) list
   | Tmty_typeof of module_expr
-  | Tmty_alias of Path.t * Longident.t loc
+  | Tmty_alias of Path_.t * Longident_.t loc
 
 and primitive_coercion = T.primitive_coercion =
   {
     pc_desc: Primitive.description;
     pc_type: Types.type_expr;
     pc_env: Env.t;
-    pc_loc : Location.t;
+    pc_loc : Location_.t;
   }
 
 and signature = T.signature = {
@@ -1009,7 +1091,7 @@ and signature = T.signature = {
 and signature_item = T.signature_item =
   { sig_desc: signature_item_desc;
     sig_env : Env.t; (* BINANNOT ADDED *)
-    sig_loc: Location.t }
+    sig_loc: Location_.t }
 
 and signature_item_desc = T.signature_item_desc =
     Tsig_value of value_description
@@ -1030,31 +1112,31 @@ and signature_item_desc = T.signature_item_desc =
 
 and module_declaration = T.module_declaration =
     {
-     md_id: Ident.t option;
+     md_id: Ident_.t option;
      md_name: string option loc;
      md_presence: Types.module_presence;
      md_type: module_type;
      md_attributes: attributes;
-     md_loc: Location.t;
+     md_loc: Location_.t;
     }
 
 and module_substitution = T.module_substitution =
     {
-     ms_id: Ident.t;
+     ms_id: Ident_.t;
      ms_name: string loc;
-     ms_manifest: Path.t;
-     ms_txt: Longident.t loc;
+     ms_manifest: Path_.t;
+     ms_txt: Longident_.t loc;
      ms_attributes: attributes;
-     ms_loc: Location.t;
+     ms_loc: Location_.t;
     }
 
 and module_type_declaration = T.module_type_declaration =
     {
-     mtd_id: Ident.t;
+     mtd_id: Ident_.t;
      mtd_name: string loc;
      mtd_type: module_type option;
      mtd_attributes: attributes;
-     mtd_loc: Location.t;
+     mtd_loc: Location_.t;
     }
 
 and 'a open_infos = 'a T.open_infos =
@@ -1063,11 +1145,11 @@ and 'a open_infos = 'a T.open_infos =
      open_bound_items: Types.signature;
      open_override: Asttypes_.override_flag;
      open_env: Env.t;
-     open_loc: Location.t;
+     open_loc: Location_.t;
      open_attributes: attribute list;
     }
 
-and open_description = (Path.t * Longident.t loc) open_infos
+and open_description = (Path_.t * Longident_.t loc) open_infos
 
 and open_declaration = module_expr open_infos
 
@@ -1076,7 +1158,7 @@ and 'a include_infos = 'a T.include_infos =
     {
      incl_mod: 'a;
      incl_type: Types.signature;
-     incl_loc: Location.t;
+     incl_loc: Location_.t;
      incl_attributes: attribute list;
     }
 
@@ -1086,10 +1168,10 @@ and include_declaration = module_expr include_infos
 
 and with_constraint = T.with_constraint =
     Twith_type of type_declaration
-  | Twith_module of Path.t * Longident.t loc
+  | Twith_module of Path_.t * Longident_.t loc
   | Twith_modtype of module_type
   | Twith_typesubst of type_declaration
-  | Twith_modsubst of Path.t * Longident.t loc
+  | Twith_modsubst of Path_.t * Longident_.t loc
   | Twith_modtypesubst of module_type
 
 and core_type = T.core_type =
@@ -1098,7 +1180,7 @@ and core_type = T.core_type =
     mutable ctyp_type : Types.type_expr;
       (** mutable because of [Typeclass.declare_method] *)
     ctyp_env : Env.t; (* BINANNOT ADDED *)
-    ctyp_loc : Location.t;
+    ctyp_loc : Location_.t;
     ctyp_attributes: attributes;
    }
 
@@ -1107,24 +1189,24 @@ and core_type_desc = T.core_type_desc =
   | Ttyp_var of string
   | Ttyp_arrow of Asttypes_.arg_label * core_type * core_type
   | Ttyp_tuple of core_type list
-  | Ttyp_constr of Path.t * Longident.t loc * core_type list
+  | Ttyp_constr of Path_.t * Longident_.t loc * core_type list
   | Ttyp_object of object_field list * Asttypes_.closed_flag
-  | Ttyp_class of Path.t * Longident.t loc * core_type list
+  | Ttyp_class of Path_.t * Longident_.t loc * core_type list
   | Ttyp_alias of core_type * string
   | Ttyp_variant of row_field list * Asttypes_.closed_flag * Asttypes_.label list option
   | Ttyp_poly of string list * core_type
   | Ttyp_package of package_type
 
 and package_type = T.package_type = {
-  pack_path : Path.t;
-  pack_fields : (Longident.t loc * core_type) list;
+  pack_path : Path_.t;
+  pack_fields : (Longident_.t loc * core_type) list;
   pack_type : Types.module_type;
-  pack_txt : Longident.t loc;
+  pack_txt : Longident_.t loc;
 }
 
 and row_field = T.row_field = {
   rf_desc : row_field_desc;
-  rf_loc : Location.t;
+  rf_loc : Location_.t;
   rf_attributes : attributes;
 }
 
@@ -1134,7 +1216,7 @@ and row_field_desc = T.row_field_desc =
 
 and object_field = T.object_field = {
   of_desc : object_field_desc;
-  of_loc : Location.t;
+  of_loc : Location_.t;
   of_attributes : attributes;
 }
 
@@ -1143,26 +1225,26 @@ and object_field_desc = T.object_field_desc =
   | OTinherit of core_type
 
 and value_description = T.value_description =
-  { val_id: Ident.t;
+  { val_id: Ident_.t;
     val_name: string loc;
     val_desc: core_type;
     val_val: Types.value_description;
     val_prim: string list;
-    val_loc: Location.t;
+    val_loc: Location_.t;
     val_attributes: attributes;
     }
 
 and type_declaration = T.type_declaration =
   {
-    typ_id: Ident.t;
+    typ_id: Ident_.t;
     typ_name: string loc;
     typ_params: (core_type * (Asttypes_.variance * Asttypes_.injectivity)) list;
     typ_type: Types.type_declaration;
-    typ_cstrs: (core_type * core_type * Location.t) list;
+    typ_cstrs: (core_type * core_type * Location_.t) list;
     typ_kind: type_kind;
     typ_private: Asttypes_.private_flag;
     typ_manifest: core_type option;
-    typ_loc: Location.t;
+    typ_loc: Location_.t;
     typ_attributes: attributes;
    }
 
@@ -1174,22 +1256,22 @@ and type_kind = T.type_kind =
 
 and label_declaration = T.label_declaration =
     {
-     ld_id: Ident.t;
+     ld_id: Ident_.t;
      ld_name: string loc;
      ld_mutable: Asttypes_.mutable_flag;
      ld_type: core_type;
-     ld_loc: Location.t;
+     ld_loc: Location_.t;
      ld_attributes: attributes;
     }
 
 and constructor_declaration = T.constructor_declaration =
     {
-     cd_id: Ident.t;
+     cd_id: Ident_.t;
      cd_name: string loc;
      cd_vars: string loc list;
      cd_args: constructor_arguments;
      cd_res: core_type option;
-     cd_loc: Location.t;
+     cd_loc: Location_.t;
      cd_attributes: attributes;
     }
 
@@ -1199,47 +1281,47 @@ and constructor_arguments = T.constructor_arguments =
 
 and type_extension = T.type_extension =
   {
-    tyext_path: Path.t;
-    tyext_txt: Longident.t loc;
+    tyext_path: Path_.t;
+    tyext_txt: Longident_.t loc;
     tyext_params: (core_type * (Asttypes_.variance * Asttypes_.injectivity)) list;
     tyext_constructors: extension_constructor list;
     tyext_private: Asttypes_.private_flag;
-    tyext_loc: Location.t;
+    tyext_loc: Location_.t;
     tyext_attributes: attributes;
   }
 
 and type_exception = T.type_exception =
   {
     tyexn_constructor: extension_constructor;
-    tyexn_loc: Location.t;
+    tyexn_loc: Location_.t;
     tyexn_attributes: attribute list;
   }
 
 and extension_constructor = T.extension_constructor =
   {
-    ext_id: Ident.t;
+    ext_id: Ident_.t;
     ext_name: string loc;
     ext_type : Types.extension_constructor;
     ext_kind : extension_constructor_kind;
-    ext_loc : Location.t;
+    ext_loc : Location_.t;
     ext_attributes: attributes;
   }
 
 and extension_constructor_kind = T.extension_constructor_kind =
     Text_decl of string loc list * constructor_arguments * core_type option
-  | Text_rebind of Path.t * Longident.t loc
+  | Text_rebind of Path_.t * Longident_.t loc
 
 and class_type = T.class_type =
     {
      cltyp_desc: class_type_desc;
      cltyp_type: Types.class_type;
      cltyp_env: Env.t;
-     cltyp_loc: Location.t;
+     cltyp_loc: Location_.t;
      cltyp_attributes: attributes;
     }
 
 and class_type_desc = T.class_type_desc =
-    Tcty_constr of Path.t * Longident.t loc * core_type list
+    Tcty_constr of Path_.t * Longident_.t loc * core_type list
   | Tcty_signature of class_signature
   | Tcty_arrow of Asttypes_.arg_label * core_type * class_type
   | Tcty_open of open_description * class_type
@@ -1252,7 +1334,7 @@ and class_signature = T.class_signature = {
 
 and class_type_field = T.class_type_field = {
     ctf_desc: class_type_field_desc;
-    ctf_loc: Location.t;
+    ctf_loc: Location_.t;
     ctf_attributes: attributes;
   }
 
@@ -1276,14 +1358,14 @@ and 'a class_infos = 'a T.class_infos =
   { ci_virt: Asttypes_.virtual_flag;
     ci_params: (core_type * (Asttypes_.variance * Asttypes_.injectivity)) list;
     ci_id_name : string loc;
-    ci_id_class: Ident.t;
-    ci_id_class_type : Ident.t;
-    ci_id_object : Ident.t;
-    ci_id_typehash : Ident.t;
+    ci_id_class: Ident_.t;
+    ci_id_class_type : Ident_.t;
+    ci_id_object : Ident_.t;
+    ci_id_typehash : Ident_.t;
     ci_expr: 'a;
     ci_decl: Types.class_declaration;
     ci_type_decl : Types.class_type_declaration;
-    ci_loc: Location.t;
+    ci_loc: Location_.t;
     ci_attributes: attributes;
    }
 
@@ -1323,7 +1405,7 @@ type ast = Cmt_format.cmt_infos = {
   cmt_annots : binary_annots;
   cmt_value_dependencies :
     (Types.value_description * Types.value_description) list [@opaque];
-  cmt_comments : (string * Location.t) list [@opaque];
+  cmt_comments : (string * Location_.t) list [@opaque];
   cmt_args : string array;
   cmt_sourcefile : string option;
   cmt_builddir : string;
@@ -1333,7 +1415,7 @@ type ast = Cmt_format.cmt_infos = {
   cmt_imports : Misc.crcs [@opaque];
   cmt_interface_digest : Digest.t option [@opaque];
   cmt_use_summaries : bool;
-  cmt_uid_to_loc : Location.t Shape.Uid.Tbl.t [@opaque];
+  cmt_uid_to_loc : Location_.t Shape.Uid.Tbl.t [@opaque];
   cmt_impl_shape : Shape.t option [@opaque];
 }
 [@@deriving show]
