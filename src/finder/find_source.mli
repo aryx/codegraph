@@ -12,5 +12,4 @@ val files_of_dir_or_files:
   lang:string ->
   Common2_.filename list -> Common2_.filename list
 
-
 val finder: string -> (Fpath.t list -> Fpath.t list)
