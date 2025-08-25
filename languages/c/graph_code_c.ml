@@ -85,8 +85,8 @@ type env = {
   in_assign : bool;
   (* mostly to remove some warnings on lookup failures *)
   in_define : bool;
-  (* for datalog *)
-  in_return : bool;
+  (* for datalog TODO seems unused *)
+  _in_return : bool;
   (* covers also the parameters; the type_ is really only for datalog_c *)
   locals : (string * type_ option) list ref;
   (* for static functions, globals, 'main', and local enums/constants/macros *)
@@ -113,7 +113,8 @@ and phase = Defs | Uses
 
 and config = {
   types_dependencies : bool;
-  fields_dependencies : bool;
+  (* TODO: remove, seems unused *)
+  _fields_dependencies : bool;
   macro_dependencies : bool;
   (* We normally expand references to typedefs, to normalize and simplify
    * things. Set this variable to true if instead you want to know who is
@@ -788,7 +789,7 @@ and stmt env = function
       stmt env st
   | For (_, ForEllipsis _, st) -> stmt env st
   | Return (_, eopt) ->
-      Option.iter (expr_toplevel { env with in_return = true }) eopt
+      Option.iter (expr_toplevel { env with _in_return = true }) eopt
   | Continue _
   | Break _ ->
       ()
@@ -1047,7 +1048,7 @@ let build (root : Fpath.t) files =
     {
       types_dependencies = true;
       (* TODO currently unused, we do not process fields :( *)
-      fields_dependencies = true;
+      _fields_dependencies = true;
       macro_dependencies = false;
       propagate_deps_def_to_decl = false;
       (* let's expand typedefs, it's simpler, hence false *)
@@ -1065,7 +1066,7 @@ let build (root : Fpath.t) files =
       conf;
       in_assign = false;
       in_define = false;
-      in_return = false;
+      _in_return = false;
       (* will be overriden by file specific hashtbl *)
       local_rename = Hashtbl.create 0;
       dupes = Hashtbl.create 101;
