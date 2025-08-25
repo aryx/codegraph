@@ -1,0 +1,15 @@
+# -*- org -*-
+
+* TODO
+
+* 0.X (Q3 2025) (Dockerfile and GHA)
+
+** testinfra
+
+- Dockerfile and docker.yml GHA CI
+
+* ...
+
+* alpha  (Q? 2021?) (first proto)
+
+- first prototype as part of pfff at Facebook
