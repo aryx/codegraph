@@ -1,22 +1,19 @@
 opam-version: "2.0"
-name: "codemap"
+name: "codegraph"
 version: "0.1.0"
 synopsis: "Stuff"
 description: """
 More stuff
 """
 
-maintainer: "Yoann Padioleau <pad@r2c.dev>"
-authors: [ "Yoann Padioleau <pad@r2c.dev>" ]
-license: "LGPL-2.1"
-homepage: "https://semgrep.dev"
-dev-repo: "git+https://github.com/aryx/codemap"
-bug-reports: "https://github.com/aryx/codemap/issues"
+maintainer: "Yoann Padioleau <yoann.padioleau@gmail.com>"
+authors: [ "Yoann Padioleau <yoann.padioleau@gmail.com>" ]
+license: "LGPL-2.1-only WITH OCaml-LGPL-linking-exception"
+homepage: "https://github.com/aryx/codegraph"
+dev-repo: "git+https://github.com/aryx/codegraph"
+bug-reports: "https://github.com/aryx/codegraph/issues"
 
-# These are build dependencies.
-# Development-only dependencies are in 'dev/dev.opam'.
-#
-#TODO: there are also tons of dependencies to pfff and pfff-lang_GENERIC_base in semgrep
+#TODO: there are also tons of dependencies to semgrep
 depends: [
   "dune" {>= "2.7.0" }
   "lablgtk"
@@ -24,4 +21,3 @@ depends: [
 ]
 
 build: [make]
-
