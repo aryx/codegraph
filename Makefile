@@ -8,7 +8,7 @@
 
 # TODO: add {,test.bc} at some point
 default:
-	dune build _build/install/default/bin/{codegraph,codegraph_build}
+	bash -c "dune build _build/install/default/bin/{codegraph,codegraph_build}"
 
 all:
 	dune build
