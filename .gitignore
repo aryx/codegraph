@@ -1,5 +1,4 @@
-_build
-.merlin
+/_build
 
-/codegraph.install
-/gui.install
+# /codegraph.install
+# /gui.install

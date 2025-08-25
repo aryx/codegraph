@@ -87,8 +87,9 @@ type env = {
   full_path_local_value: (string * name) list ref;
   (* this is less necessary because by convention modules use uppercase and
    * values/types only lowercase and so there is no shadowing risk.
+   * TODO: seems unused, delete?
    *)
-  full_path_local_module: (string * name) list ref;
+  _full_path_local_module: (string * name) list ref;
 
   (* global to the whole project, populated in Defs and used in Uses,
    * see path_resolve_aliases().
@@ -632,7 +633,7 @@ let rec extract_defs_uses ~root env ast readable_cmt =
     locals = [];
     full_path_local_value = ref [];
     full_path_local_type = ref [];
-    full_path_local_module = ref [];
+    _full_path_local_module = ref [];
   }
   in
   if env.phase =*= Defs then begin
@@ -1353,7 +1354,7 @@ let build (root : Fpath.t) ~cmt_files ~ml_files =
     locals = [];
     full_path_local_type = ref [];
     full_path_local_value = ref [];
-    full_path_local_module = ref [];
+    _full_path_local_module = ref [];
     lookup_fail = (fun env dst ->
       let src = env.current in
       Logs.warn (fun m -> m "PB: lookup_fail on %s (in %s, in file %s)"
