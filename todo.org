@@ -2,30 +2,41 @@
 
 * Last
 
-** Last2
+** Last
 
 *** update codegraph to OCaml 5.1 AST?
+
+*** move all pfff/todo.txt in codegraph/todo.txt
+
+* Features
+
+** Codegraph
 
 *** filter the equal_xxx, pp_xxx functions, so they don't count as users
 of a field, and also they reduce the number of entities in a file
 (e.g., expanding AST_generic takes forever because of all those generated code)
 
+** Codegraph_build
 
-** Last1
+* Internals
 
-*** use model-view-update to simplify the code?
-
-*** rewrite using FRP/ELM style?
-
-*** move all pfff/todo.txt in codegraph/todo.txt
-
-*** OPAM package, people want to install it
+** GUI 
 
 *** use bogue with sdl2+cairo instead of lablgtk?
 still weird display bug on macOS?
 
+*** use model-view-update to simplify the code? rewrite using FRP/ELM style?
+
 *** port to the web? use Dream?
+
 
 *** experiment with JsOfOCairo??
 or use directly Canvas? Worth factorizing code?
 
+
+* Infra
+
+** Install infra
+
+*** OPAM package, people want to install it
+#but depends on semgrep libs and codemap libs so need first to package those

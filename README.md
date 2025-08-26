@@ -1,7 +1,7 @@
 # codegraph
 Source code dependencies visualizer
 
-## Usage for `codegraph`
+## Usage for `codegraph_build`
 ```sh
 $ ./codegraph_build -lang cmt ~/pfff
 ```
@@ -9,6 +9,10 @@ $ ./codegraph_build -lang cmt ~/pfff
 to generate a `graph_code.marshall` file in `~/pfff` containing
 all dependency information about the pfff codebase using the
 typed bytecode `.cmt` files generated during the compilation of pfff.
+
+
+## Usage for `codegraph`
+
 ```sh
 $ ./codegraph ~/pfff
 ```

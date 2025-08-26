@@ -19,6 +19,8 @@ test:
 install:
 	dune install
 
+.PHONY: all clean test install
+
 build-docker:
 	docker build -t "codegraph" .
 
@@ -28,5 +30,3 @@ build-docker:
 
 visual:
 	codemap -screen_size 3 -filter pfff -efuns_client efuns_client -emacs_client /dev/null .
-
-.PHONY: all clean install test dump

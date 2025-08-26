@@ -23,7 +23,7 @@ set -eu # to debug this script add '-x'
 
 #in theory we should also
 # - check the ocaml switch is a good version
-# - check external deps are installed (e.g., pcre)
+# - check external deps are installed (e.g., pcre, codemap libs, semgrep libs)
 
 opam install --no-depexts --deps-only ./codegraph.opam -y
 

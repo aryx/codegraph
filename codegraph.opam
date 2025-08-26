@@ -13,7 +13,7 @@ homepage: "https://github.com/aryx/codegraph"
 dev-repo: "git+https://github.com/aryx/codegraph"
 bug-reports: "https://github.com/aryx/codegraph/issues"
 
-#TODO: there are also tons of dependencies to semgrep
+#TODO: there are also tons of dependencies to semgrep and also codemap!
 depends: [
   "dune" {>= "2.7.0" }
   "lablgtk"
