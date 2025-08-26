@@ -31,7 +31,7 @@ RUN eval $(opam env) && make install-semgrep-libs
 #TODO: can't because then can't find -ltree-sitter
 # RUN rm -rf /semgrep
 
-# Install codemap libs (commons2_, graph_code, visualization) for codegraph
+# Install codemap libs (graph_code, visualization, commons2_) for codegraph
 WORKDIR /codemap
 # alt: add codemap as a submodule in codegraph source
 RUN git clone https://github.com/aryx/codemap /codemap
