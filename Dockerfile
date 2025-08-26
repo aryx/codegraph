@@ -57,4 +57,4 @@ RUN eval $(opam env) && make install
 
 # Test
 RUN eval $(opam env) && codegraph --help && codegraph_build --help
-# TODO run more tests
+# TODO run more tests, make test!
