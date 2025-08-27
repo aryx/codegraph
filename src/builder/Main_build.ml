@@ -34,6 +34,7 @@ let log_level = ref (Some Logs.Warning)
 (* TODO: delete *)
 let verbose = ref false
 
+(* possible values: "cmt", "c", ... *)
 let lang_str = ref "ml"
 
 let output_dir = ref None
@@ -505,7 +506,7 @@ let options () = [
 
 let main () = 
   let usage_msg = 
-    spf "Usage: %s [options] <dir> \nDoc: %s\nOptions:"
+    spf "Usage: %s [options] -lang <lang> <dir> \nDoc: %s\nOptions:"
       (Filename.basename Sys.argv.(0))
       "https://github.com/facebook/pfff/wiki/Codegraph"
   in
