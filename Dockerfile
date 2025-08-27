@@ -58,4 +58,4 @@ RUN eval $(opam env) && dune install
 
 # Test
 RUN eval $(opam env) && codegraph --help && codegraph_build --help
-# TODO run more tests, make test!
+RUN eval $(opam env) && make test

@@ -16,6 +16,9 @@ clean:
 	dune clean
 test:
 	dune runtest
+	$(MAKE) -C tests test
+	$(MAKE) index
+
 install:
 	dune install
 
@@ -35,4 +38,6 @@ visual:
 	codemap -screen_size 3 -filter pfff -efuns_client efuns_client -emacs_client /dev/null .
 # requires make clean; make (not make all) to work before
 index:
+	$(MAKE) clean
+	$(MAKE)
 	codegraph_build -lang cmt .

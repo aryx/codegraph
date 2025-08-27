@@ -3,5 +3,9 @@
 
 all:
 	dune build --root .
+
+test: all
+	codegraph_build -lang cmt .
+
 clean:
 	dune clean --root .
