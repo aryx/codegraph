@@ -33,3 +33,6 @@ build-docker-ocaml5:
 
 visual:
 	codemap -screen_size 3 -filter pfff -efuns_client efuns_client -emacs_client /dev/null .
+# requires make clean; make (not make all) to work before
+index:
+	codegraph_build -lang cmt .
