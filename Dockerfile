@@ -26,16 +26,18 @@ RUN eval $(opam env) && dune install
 #TODO: can't because then can't find -ltree-sitter
 # RUN rm -rf /semgrep
 
-# Install codemap libs (graph_code, visualization, commons2_) for codegraph
+# Install codemap libs for codegraph (see list below after dune install)
 WORKDIR /codemap
 RUN apt-get install -y libcairo2-dev libgtk2.0-dev
 # alt: add codemap as a submodule in codegraph source
 RUN git clone --depth=1 https://github.com/aryx/codemap /codemap
 RUN ./configure
-RUN eval $(opam env) && make
-RUN eval $(opam env) && make all
-# TODO: dune install needed subset
-RUN eval $(opam env) && dune install
+RUN eval $(opam env) && make && make all
+RUN eval $(opam env) && dune install \
+    commons2_ files-format \
+    visualization \
+    graph_code highlight_code database_code layer_code \
+    parser_c
 RUN rm -rf /codemap
 
 
