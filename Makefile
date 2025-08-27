@@ -23,6 +23,7 @@ install:
 
 build-docker:
 	docker build -t "codegraph" .
+#TODO: does not work yet because of cmt
 build-docker-ocaml5:
 	docker build -t "codegraph" --build-arg OCAML_VERSION=5.2.1 .
 
