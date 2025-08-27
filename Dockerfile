@@ -9,9 +9,9 @@ RUN apt-get install -y build-essential autoconf automake pkgconf git wget curl
 
 # Setup OPAM and OCaml
 RUN apt-get install -y opam
-# Initialize opam (disable sandboxing due to Docker)
-RUN opam init --disable-sandboxing -y
-RUN opam switch create 4.14.2 -v
+RUN opam init --disable-sandboxing -y # (disable sandboxing due to Docker)
+ARG OCAML_VERSION=4.14.2
+RUN opam switch create ${OCAML_VERSION} -v
 
 
 # Install semgrep libs (and its many dependencies) for codegraph_build
@@ -34,6 +34,7 @@ RUN git clone --depth=1 https://github.com/aryx/codemap /codemap
 RUN ./configure
 RUN eval $(opam env) && make
 RUN eval $(opam env) && make all
+# TODO: dune install needed subset
 RUN eval $(opam env) && dune install
 RUN rm -rf /codemap
 

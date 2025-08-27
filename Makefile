@@ -23,6 +23,8 @@ install:
 
 build-docker:
 	docker build -t "codegraph" .
+build-docker-ocaml5:
+	docker build -t "codegraph" --build-arg OCAML_VERSION=5.2.1 .
 
 ###############################################################################
 # Developer targets
