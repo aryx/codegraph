@@ -31,8 +31,8 @@ let find_cmt_files_of_dir_or_files (xs : Fpath.t list) : Fpath.t list =
   let caps = Cap.readdir_UNSAFE () in
   UFile.files_of_dirs_or_files_no_vcs_nofilter caps xs
   |> List.filter (fun filename ->
-         match File_type.file_type_of_file filename with
-         | File_type.Obj ("cmt" | "cmti") -> true
+         match Ftype.of_file filename with
+         | Ftype.Obj ("cmt" | "cmti") -> true
          | _ -> false)
   (* ocaml 4.07 stdlib now has those .p.cmt files that cause dupe errors *)
   |> List_.exclude (fun filename -> !!filename =~ ".*\\.p\\.cmt")
@@ -61,8 +61,8 @@ let find_ml_files_of_dir_or_files xs =
   let caps = Cap.readdir_UNSAFE () in
   UFile.files_of_dirs_or_files_no_vcs_nofilter caps xs
   |> List.filter (fun filename ->
-         match File_type.file_type_of_file filename with
-         | File_type.PL (File_type.OCaml "ml") -> true
+         match Ftype.of_file filename with
+         | Ftype.PL (Ftype.OCaml "ml") -> true
          | _ -> false)
   |> List_.sort
 
