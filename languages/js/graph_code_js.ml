@@ -602,7 +602,7 @@ and expr env e =
 
   | New _ ->  (* TODO *) ()
 
-  | Conditional (e1, e2, e3) ->
+  | Conditional (e1, _t1, e2, _t2, e3) ->
       List.iter (expr env) [e1;e2;e3]
   | Xml x -> xml env x
 

@@ -17,7 +17,7 @@
    parser_javascript.menhir parser_javascript.ast_generic
    parser_ocaml.menhir parser_ocaml.ast_generic
    
-   pfff-lang_GENERIC-naming ; Naming_AST.ml
+   pfff_lang_GENERIC_naming ; Naming_AST.ml
  )
  (preprocess
     (pps

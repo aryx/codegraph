@@ -152,7 +152,7 @@ let rec classname_and_info_of_typ t =
 
 (* quite similar to create_intermediate_directories_if_not_present *)
 let create_intermediate_packages_if_not_present g root xs =
-  let dirs = Common2.inits xs |> List.map str_of_qualified_ident in
+  let dirs = Common2_.inits xs |> List.map str_of_qualified_ident in
   let dirs =
     match dirs with
     | "" :: xs -> xs

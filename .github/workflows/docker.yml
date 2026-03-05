@@ -22,4 +22,6 @@ jobs:
           #- 5.2.1
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - run: docker build -t "codegraph" --build-arg OCAML_VERSION=${{matrix.ocaml}} .

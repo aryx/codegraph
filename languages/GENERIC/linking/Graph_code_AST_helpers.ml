@@ -128,7 +128,7 @@ let type_of_definition_opt env dotted_ident (_ent, defkind) =
  * java-specific?
  *)
 let create_intermediate_packages_if_not_present g root xs =
-  let dirs = Common2.inits xs |> List.map (fun xs -> String.concat "." xs) in
+  let dirs = Common2_.inits xs |> List.map (fun xs -> String.concat "." xs) in
   let dirs =
     match dirs with
     | "" :: xs -> xs

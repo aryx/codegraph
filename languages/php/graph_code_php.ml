@@ -1051,7 +1051,8 @@ and expr env x =
       expr env e;
       matchl env matches
   | Ellipsis _
-  | DeepEllipsis (_, _, _) ->
+  | DeepEllipsis (_, _, _)
+  | TypedMetavar (_, _) ->
       raise Impossible
 
 and array_value env x = expr env x

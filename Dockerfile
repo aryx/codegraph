@@ -1,5 +1,5 @@
-# Build codegraph (and semgrep and codemap) with OCaml 4.14.2 via OPAM on Ubuntu.
-#
+# Build codegraph with OCaml 4.14.2 via OPAM on Ubuntu.
+# semgrep-libs and semgrep-pfff-langs are vendored as git submodules.
 
 FROM ubuntu:22.04
 # alt: 24.04
@@ -11,50 +11,33 @@ RUN apt-get install -y build-essential autoconf automake pkgconf git wget curl
 # Setup OPAM and OCaml
 RUN apt-get install -y opam
 RUN opam init --disable-sandboxing -y # (disable sandboxing due to Docker)
+# can adjust with docker --build-arg OCAML_VERSION=5.2.1 ...
 ARG OCAML_VERSION=4.14.2
 RUN opam switch create ${OCAML_VERSION} -v
 
-
-# Install semgrep libs (and its many dependencies) for codegraph_build
-WORKDIR /semgrep
-RUN git clone --depth=1 --recurse-submodules https://github.com/aryx/semgrep-libs /semgrep
-#coupling: https://github.com/aryx/semgrep-libs/blob/master/Dockerfile
-# and install-deps-UBUNTU-for-semgrep-core Makefile target
+# Add external deps of codegraph and its submodules
+# coupling: semgrep-libs needs pcre, gmp, ev, curl
 RUN apt-get install -y pkg-config libpcre3-dev libpcre2-dev libgmp-dev libev-dev libcurl4-gnutls-dev
-RUN ./configure
-RUN eval $(opam env) && make && make dune-build-all
-RUN eval $(opam env) && dune install
-#TODO: can't because then can't find -ltree-sitter
-# RUN rm -rf /semgrep
-
-# Install codemap libs for codegraph (see list below after dune install)
-WORKDIR /codemap
+# codegraph GUI needs cairo and gtk2
 RUN apt-get install -y libcairo2-dev libgtk2.0-dev
-# alt: add codemap as a submodule in codegraph source
-RUN git clone --depth=1 https://github.com/aryx/codemap /codemap
-RUN ./configure
-RUN eval $(opam env) && make && make all
-RUN eval $(opam env) && dune install \
-    commons2_ files-format \
-    visualization \
-    graph_code highlight_code database_code layer_code \
-    parser_c
-RUN rm -rf /codemap
 
-
-# Back to codegraph
 WORKDIR /src
 
-# Install other dependencies
+# Install dependencies (copy minimal files for Docker layer caching)
 COPY codegraph.opam configure ./
+# Copy enough submodule content for configure to work
+COPY semgrep-libs/TCB/ ./semgrep-libs/TCB/
+COPY semgrep-pfff-langs/scripts/setup-tree-sitter.sh ./semgrep-pfff-langs/scripts/
+COPY semgrep-pfff-langs/libs/ocaml-tree-sitter-core/ ./semgrep-pfff-langs/libs/ocaml-tree-sitter-core/
 RUN ./configure
 
-# Now let's build from source
+# Now copy the full source and build
 COPY . .
-
 RUN eval $(opam env) && make
-RUN eval $(opam env) && make all
-RUN eval $(opam env) && dune install
+# Note: 'make all' (dune build) is not used here because it would try to build
+# all libraries in vendored submodules, including ones that depend on osemgrep
+# or JS packages (cohttp-lwt, js_of_ocaml-lwt, semgrep.core) not needed by codegraph.
+RUN eval $(opam env) && make install
 
 # Test
 RUN eval $(opam env) && codegraph --help && codegraph_build --help

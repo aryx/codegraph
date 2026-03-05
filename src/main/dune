@@ -3,7 +3,7 @@
  (libraries 
     graph_code
 
-    ; now in codemap
+    ; from semgrep-libs
     files-format
 
     ; local deps

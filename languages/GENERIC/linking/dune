@@ -11,9 +11,9 @@
    commons
    commons2_
 
-   graph_code ; in semgrep now
-   ast_generic ; actually now in semgrep
-   semgrep.core ; just Lang.t I think
+   graph_code
+   ast_generic
+   lib_languages ; for Lang.t (was semgrep.core)
  )
  (preprocess
     (pps

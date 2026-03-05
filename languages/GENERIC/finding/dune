@@ -9,7 +9,7 @@
    commons
    commons2_
    lib_parsing
-   semgrep.core ; for Lang.ml, could move out of semgrep
+   lib_languages ; for Lang.ml (was semgrep.core)
 
  )
  (preprocess

@@ -370,6 +370,8 @@ and map_expr_kind env ekind : T.t option =
       todo_type
   | RawExpr _ ->
       todo_type
+  | RecordWith _ ->
+      todo_type
 
 (* TODO: return builtin types *)
 and map_literal env x : T.t option =
@@ -665,6 +667,10 @@ and map_stmt_kind env = function
   | OtherStmt (v1, v2) ->
       let v1 = map_other_stmt_operator env v1
       and v2 = map_of_list (map_any env) v2 in
+      nothing env (v1, v2)
+  | Defer (v1, v2) ->
+      let v1 = map_tok env v1
+      and v2 = map_stmt env v2 in
       nothing env (v1, v2)
 
 and map_condition env = function
