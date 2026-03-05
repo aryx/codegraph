@@ -88,14 +88,8 @@ For more information see https://github.com/aryx/codegraph
 ; codegraph's own public libraries
 ; (per-language graph/ libs moved to semgrep-pfff-langs/languages/<lang>/graph/)
 
-(package (name pfff-lang_cmt-analyze)
-  (synopsis "OCaml CMT code graph analyzer")
-  (description "OCaml bytecode metadata code graph builder.")
-)
-(package (name pfff-lang_cmt)
-  (synopsis "OCaml CMT parser")
-  (description "OCaml bytecode metadata parser.")
-)
+; (cmt libs moved to semgrep-pfff-langs/compiled/cmt/)
+
 (package (name pfff-lang_GENERIC_finding)
   (synopsis "Generic language file finder")
   (description "Find source files by language using AST_generic.")

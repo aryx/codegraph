@@ -19,7 +19,7 @@
     database_code ; for graph_code_database
 
     ; for find_source, the find_source_files_or...
-    codegraph.finder
+    parser_cmt.finder
     parser_php.ast
     parser_cpp.ast
     ;TODO parser_c.ast
@@ -47,8 +47,8 @@
     ; in codegraph now!
     pfff-lang_GENERIC_linking
 
-    ; in lang_SPECIFIC/pfff-bytecode
-    pfff-lang_cmt-analyze
+    ; in compiled/cmt/
+    parser_cmt.graph
 
  )
  ; for ocamldebug
