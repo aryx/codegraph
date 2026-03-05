@@ -42,3 +42,5 @@ RUN eval $(opam env) && make install
 # Test
 RUN eval $(opam env) && codegraph --help && codegraph_build --help
 RUN eval $(opam env) && make test
+#TODO: dogfooding test, codegraph on itself, but does not work anymore
+#RUN eval $(opam env) && make index

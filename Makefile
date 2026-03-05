@@ -22,7 +22,6 @@ clean:
 test:
 	dune runtest
 	$(MAKE) -C tests test
-	$(MAKE) index
 
 install:
 	dune build codegraph.install
