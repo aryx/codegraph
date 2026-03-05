@@ -3,4 +3,4 @@
 
 # ignore submodules for now
 /semgrep-pfff-langs
-/semgrep-libs
+/semgrep-pfff-libs

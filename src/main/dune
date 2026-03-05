@@ -3,7 +3,7 @@
  (libraries 
     graph_code
 
-    ; from semgrep-libs
+    ; from semgrep-pfff-libs
     files-format
 
     ; local deps

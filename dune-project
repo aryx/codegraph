@@ -33,11 +33,11 @@ For more information see https://github.com/aryx/codegraph
     cairo2-gtk
     ounit
     ocamlgraph
-    ; External deps of vendored submodules (semgrep-libs, semgrep-pfff-langs).
+    ; External deps of vendored submodules (semgrep-pfff-libs, semgrep-pfff-langs).
     ; These are needed because the submodules are built from source as part of
     ; the dune workspace, so their opam deps are not resolved automatically.
-    ; coupling: semgrep-libs/dune-project, semgrep-pfff-langs/dune-project
-    ; -- from semgrep-libs (mainly commons) --
+    ; coupling: semgrep-pfff-libs/dune-project, semgrep-pfff-langs/dune-project
+    ; -- from semgrep-pfff-libs (mainly commons) --
     ANSITerminal
     alcotest
     alcotest-lwt

@@ -14,7 +14,7 @@
     paths
     gitignore
 
-    ; from semgrep-libs/semgrep-pfff-langs
+    ; from semgrep-pfff-libs/semgrep-pfff-langs
     files-format
     database_code ; for graph_code_database
 
