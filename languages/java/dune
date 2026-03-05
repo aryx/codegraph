@@ -6,7 +6,7 @@
 
    commons profiling process_limits
    commons2_
-   lib_parsing
+   parsing_core
    
    graph_code
    parser_java.ast parser_java.menhir

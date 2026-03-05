@@ -9,7 +9,7 @@
 
     commons profiling
     commons2_
-    lib_parsing
+    parsing_core
     graph_code
     paths
     gitignore

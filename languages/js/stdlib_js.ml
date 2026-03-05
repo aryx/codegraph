@@ -15,7 +15,7 @@
 open Common
 module TH = Token_helpers_js
 module E = Entity_code
-module F = Ast_fuzzy
+module F = AST_fuzzy
 
 (*****************************************************************************)
 (* Prelude *)

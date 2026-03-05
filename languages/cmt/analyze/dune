@@ -7,7 +7,7 @@
    compiler-libs
 
    commons commons2_
-   lib_parsing
+   parsing_core
    graph_code 
    parser_ocaml.ast
    

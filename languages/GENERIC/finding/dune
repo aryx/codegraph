@@ -8,8 +8,8 @@
  (libraries
    commons
    commons2_
-   lib_parsing
-   lib_languages ; for Lang.ml (was semgrep.core)
+   parsing_core
+   languages ; for Lang.ml (was semgrep.core)
 
  )
  (preprocess

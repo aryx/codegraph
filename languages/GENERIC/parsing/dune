@@ -9,7 +9,7 @@
  (libraries
    commons
    commons2_
-   lib_parsing
+   parsing_core
 
    ast_generic
    parser_python.menhir parser_python.ast_generic

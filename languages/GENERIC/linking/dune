@@ -13,7 +13,7 @@
 
    graph_code
    ast_generic
-   lib_languages ; for Lang.t (was semgrep.core)
+   languages ; for Lang.t (was semgrep.core)
  )
  (preprocess
     (pps

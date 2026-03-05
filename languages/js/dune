@@ -6,7 +6,8 @@
 
    commons profiling process_limits
    commons2_
-   lib_parsing
+   parsing_core
+   ast_fuzzy
    graph_code
    parser_javascript.ast parser_javascript.menhir
  )

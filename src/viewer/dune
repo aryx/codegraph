@@ -7,7 +7,7 @@
    cairo2-gtk
 
    commons
-   lib_parsing
+   parsing_core
    graph_code
    visualization
    gui
