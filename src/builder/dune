@@ -25,23 +25,14 @@
     ;TODO parser_c.ast
     parser_lisp.ast
 
-    ; for codegraph_build, in pfff (hopefully in ~/.opam)
-    pfff-lang_java-analyze ; Builtins_java
-    pfff-lang_js-analyze ; Stdlib_js
-    pfff-lang_ml-analyze
+    ; for codegraph_build, in semgrep-pfff-langs/languages/<lang>/graph/
+    parser_java.graph ; Builtins_java
+    parser_javascript.graph ; Stdlib_js
+    parser_ocaml.graph
     parser_cpp.menhir ; Parse_cpp.init_defs
-    ;TODO pfff-lang_c-analyze
-    pfff_lang_php_analyze
-    pfff-lang_lisp-analyze
-
-    ;pfff-lang_python
-    ;pfff-lang_js pfff-lang_js-analyze
-    ;pfff-lang_cpp 
-    ;pfff-lang_c pfff-lang_c-analyze
-    ;pfff-lang_ml
-    ;pfff-lang_java pfff-lang_java-analyze
-    ;pfff-lang_php pfff-lang_php-analyze pfff_lang_php_analyze2
-    ;pfff-lang_lisp pfff-lang_lisp-analyze
+    ;TODO parser_c.graph
+    parser_php.graph
+    parser_lisp.graph
 
     ; from semgrep-pfff-langs
     layer_code
