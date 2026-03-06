@@ -18,6 +18,25 @@ A great introduction to DSM for improving a codebase:
 https://blog.ndepend.com/identify-net-code-structure-patterns-with-no-effort/
 <!-- old link: http://codebetter.com/patricksmacchia/2009/08/24/identify-code-structure-patterns-at-a-glance/ -->
 
+## Why a matrix?
+
+Traditional node-link dependency graphs (graphviz, gephi, ocamldot)
+work fine for small projects, but quickly become an unreadable mess
+of crossing edges on large codebases. Even with filtering and
+layout tuning, the visual noise makes it hard to extract useful
+architectural information.
+
+After years of experimenting with various graph visualizations —
+directed graphs, force-atlas layouts, chord diagrams — on codebases
+ranging from compilers to the Facebook monorepo, it became clear
+that node-link displays simply don't scale. Paradoxically, going
+back to a tabular representation of the graph — the Dependency
+Structure Matrix — makes large dependency graphs manageable.
+The matrix scales to hundreds of components, makes dependency
+cycles immediately visible, and the hierarchical drill-down lets
+you move from a high-level package view all the way down to the
+individual functions responsible for a dependency.
+
 ### Related tools
 
 Other tools using DSM for software architecture analysis:
