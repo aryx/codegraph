@@ -7,7 +7,6 @@
  (wrapped false)
  (libraries
    commons
-   commons2_
    parsing_core
    languages ; for Lang.ml (was semgrep.core)
 

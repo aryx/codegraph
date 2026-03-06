@@ -14,7 +14,7 @@
  *)
 open Common
 (* floats are the norm in graphics *)
-open Common2_.ArithFloatInfix
+open Common2.ArithFloatInfix
 
 open Figures
 open Model

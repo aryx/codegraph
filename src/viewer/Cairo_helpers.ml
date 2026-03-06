@@ -13,7 +13,7 @@
  * license.txt for more details.
  *)
 (* floats are the norm in graphics *)
-open Common2_.ArithFloatInfix
+open Common2.ArithFloatInfix
 
 open Figures
 module F = Figures

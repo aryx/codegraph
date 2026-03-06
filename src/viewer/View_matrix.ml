@@ -12,11 +12,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the file
  * license.txt for more details.
  *)
-open Common2_
+open Common2
 open Common
 open Fpath_.Operators
 (* floats are the norm in graphics *)
-open Common2_.ArithFloatInfix
+open Common2.ArithFloatInfix
 open Figures
 open Model
 module M = Model
@@ -285,7 +285,7 @@ let draw_left_tree cr w ~interactive_regions =
         let extent = CairoH.text_extents cr txt in
         let th = extent.Cairo.height in
         let tw = extent.Cairo.width in
-        let angle = -. (Common2_.pi / 2.) in
+        let angle = -. (Common2.pi / 2.) in
         Cairo.move_to cr 
           ((x + l.width_vertical_label / 2.) + (th / 2.0))
           (y + ((n * l.height_cell) /2.) + (tw / 2.0));
@@ -328,13 +328,13 @@ let draw_up_columns cr w ~interactive_regions =
     (* because of the xy_ratio, this actually does not do a 45 deg line.
      * old: Cairo.line_to cr (x + (y_start_matrix_up / atan (pi / 4.)))  0.; 
      *)
-    Cairo.line_to cr (x + (l.y_start_matrix_up / atan (Common2_.pi / 2.8)))  0.; 
+    Cairo.line_to cr (x + (l.y_start_matrix_up / atan (Common2.pi / 2.8)))  0.; 
     Cairo.stroke cr;
 
     if j < l.nb_elts then begin
       let node = w.m.DM.i_to_name.(j) in
       Cairo.move_to cr (x + (l.width_cell / 2.0) + (th / 2.0)) (y - 0.001);
-      let angle = -. (Common2_.pi / 4.) in
+      let angle = -. (Common2.pi / 4.) in
       Cairo.rotate cr angle;
       let color = color_of_node node in
       let txt = txt_of_node node in
@@ -476,7 +476,7 @@ let draw_matrix cr w =
   !Ctl._label_settext 
     (spf "#backward deps = %d (%.2f%%), - PB = %d, - ... = %d, - biggest = %d" 
        score_up
-       (Common2_.pourcent_float score_up (score_up +.. score_down))
+       (Common2.pourcent_float score_up (score_up +.. score_down))
        (DM.score_upper_triangle w.m nodes_pb)
        (DM.score_upper_triangle w.m (nodes_pb $+$ nodes_dots))
        (DM.score_upper_triangle w.m (nodes_pb $+$ nodes_dots $+$ nodes_major))

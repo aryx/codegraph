@@ -13,7 +13,7 @@
  * license.txt for more details.
  *)
 (* floats are the norm in graphics *)
-open Common2_.ArithFloatInfix
+open Common2.ArithFloatInfix
 
 module CairoH = Cairo_helpers
 module DM = Dependencies_matrix_code

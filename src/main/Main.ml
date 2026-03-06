@@ -191,14 +191,14 @@ let constraints_of_info_txt info_txt =
   (* pr2_gen info_txt; *)
   let rec aux current node =
     match node with
-    | Common2_.Tree (node, xs) ->
+    | Common2.Tree (node, xs) ->
       let title = node.Outline.title in
       let entry = 
         match title with
         | "__ROOT__" -> "."
         | _ -> Filename.concat current title
       in
-      let children = xs |> List.map (fun (Common2_.Tree (node, _)) ->
+      let children = xs |> List.map (fun (Common2.Tree (node, _)) ->
         (match entry with
         | "." -> node.Outline.title
         | _ -> Filename.concat entry node.Outline.title
@@ -277,7 +277,7 @@ let main_action (x : string) =
   (* this is to allow to use codegraph from a subdir, see the comment
    * below about "slice of the graph"
    *)
-  let inits = Common2_.inits_of_absolute_dir dir in
+  let inits = Common2.inits_of_absolute_dir dir in
   let root : Fpath.t =
     try 
       inits |> List.rev |> List.find (fun path -> 
@@ -301,7 +301,7 @@ let main_action (x : string) =
       let readable_subdir =
         let xs = String_.split ~sep:"/" !!root in
         let ys = String_.split ~sep:"/" dir in
-        let (a, b) = Common2_.splitAt (List.length xs) ys in
+        let (a, b) = Common2.splitAt (List.length xs) ys in
         assert (xs =*= a);
         b
       in
@@ -310,7 +310,7 @@ let main_action (x : string) =
         then dir_node, readable_subdir
         else package_node, 
               try
-               Common2_.tails readable_subdir |> List.find (fun xs ->
+               Common2.tails readable_subdir |> List.find (fun xs ->
                  GC.has_node (package_node xs) model.Model.g_deprecated
                )
               with Not_found ->
@@ -375,7 +375,7 @@ let options () = [
 
   ] @
   Arg_.options_of_actions action (all_actions()) @
-  Common2_.cmdline_flags_devel () @
+  Common2.cmdline_flags_devel () @
   [
   "-verbose", Arg.Unit (fun () ->
     log_level := Some (Logs.Info);

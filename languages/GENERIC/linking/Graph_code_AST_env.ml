@@ -27,7 +27,7 @@ type env = {
   (* non-mutable fields *)
   phase : phase;
   hooks : hooks;
-  readable : Common2_.filename;
+  readable : Common2.filename;
   lang : Lang.t;
   (* the parent to connect to when creating new nodes *)
   current_parent : Graph_code.node;

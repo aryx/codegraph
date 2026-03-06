@@ -102,7 +102,7 @@ let defs_of_graph_code ?(verbose = false) g =
              | _ ->
                  if List.mem G.not_found (G.parents n g) then ()
                  else UCommon.pr2 (spf "PB, nodeinfo not found for %s" str)));
-  Common2_.hkeys hfile_to_tags
+  Common2.hkeys hfile_to_tags
   |> List.map (fun file ->
          ( file,
            Hashtbl.find_all hfile_to_tags file

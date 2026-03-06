@@ -8,7 +8,6 @@
  (wrapped false)
  (libraries
    commons
-   commons2_
    parsing_core
 
    ast_generic

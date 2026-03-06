@@ -203,7 +203,7 @@ let mk_gui w =
 
       tb#insert_widget (G.mk (GButton.button ~stock:`GO_BACK) (fun b -> 
         b#connect#clicked ~callback:(fun () -> 
-          w.path <- Common2_.list_init w.path;
+          w.path <- Common2.list_init w.path;
           View_matrix.recompute_matrix w;
         ) |> ignore;
       ));

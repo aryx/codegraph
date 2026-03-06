@@ -9,7 +9,6 @@
  (wrapped false)
  (libraries
    commons
-   commons2_
 
    graph_code
    ast_generic

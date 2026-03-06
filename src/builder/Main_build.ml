@@ -352,7 +352,7 @@ let test_xta graph_file =
   );
   let dag = Graph_code_class_analysis.class_hierarchy g in
   let htoplevels = Graph_code_class_analysis.toplevel_methods g dag in
-  htoplevels |> Common2_.hkeys |> List.iter (fun k ->
+  htoplevels |> Common2.hkeys |> List.iter (fun k ->
       let xs = Hashtbl_.get_stack htoplevels k in
       UCommon.pr2 (spf "%s -> %d (e.g. %s)" 
                k (List.length xs) (Graph_code.string_of_node (List.hd xs)));
@@ -481,7 +481,7 @@ let options () = [
   " no fake nodes when use-def mismatches\n";
   ] @
   Arg_.options_of_actions action (all_actions()) @
-  Common2_.cmdline_flags_devel () @
+  Common2.cmdline_flags_devel () @
   [
   "-verbose", Arg.Unit (fun () ->
     verbose := true;

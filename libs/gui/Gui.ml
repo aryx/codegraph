@@ -621,7 +621,7 @@ let dialog_ask_y_or_no ~text ~title  =
 
 let dialog_ask_filename ~title ~filename = 
 
-  let (res: Common2_.filename option ref) = ref None in
+  let (res: Common2.filename option ref) = ref None in
 
   let filew = GWindow.file_selection ~title ~filename ~modal:true () in
   filew#connect#destroy ~callback: GMain.Main.quit |> ignore;
@@ -712,7 +712,7 @@ let gmain_idle_add ~prio callback =
       try 
         callback ()
       with exn ->
-        UCommon.pr2 (Common2_.exn_to_s_with_backtrace exn);
+        UCommon.pr2 (Common2.exn_to_s_with_backtrace exn);
         raise exn
     )
   else begin
@@ -730,7 +730,7 @@ let gmain_timeout_add ~ms ~callback =
       try 
         callback ()
       with exn ->
-        UCommon.pr2 (Common2_.exn_to_s_with_backtrace exn);
+        UCommon.pr2 (Common2.exn_to_s_with_backtrace exn);
         raise exn
     )
   else begin

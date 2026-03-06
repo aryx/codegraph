@@ -10,14 +10,14 @@ type tag = {
 
 (* will generate a TAGS file in the current directory *)
 val generate_TAGS_file :
-  Common2_.filename -> (Common2_.filename * tag list) list -> unit
+  Common2.filename -> (Common2.filename * tag list) list -> unit
 
 (* will generate a tags file in the current directory *)
 val generate_vi_tags_file :
-  Common2_.filename -> (Common2_.filename * tag list) list -> unit
+  Common2.filename -> (Common2.filename * tag list) list -> unit
 
 val add_method_tags_when_unambiguous :
-  (Common2_.filename * tag list) list -> (Common2_.filename * tag list) list
+  (Common2.filename * tag list) list -> (Common2.filename * tag list) list
 
 (* internals *)
 val mk_tag : string -> string -> int -> int -> Entity_code.kind -> tag

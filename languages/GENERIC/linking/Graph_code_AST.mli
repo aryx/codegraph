@@ -20,5 +20,5 @@ val build :
   root:Fpath.t ->
   hooks:Graph_code_AST_env.hooks ->
   Lang.t ->
-  (Common2_.filename * AST_generic.program) list ->
+  (Common2.filename * AST_generic.program) list ->
   Graph_code.t * Stat_code.t

@@ -8,7 +8,6 @@
     compiler-libs.common
 
     commons profiling
-    commons2_
     parsing_core
     graph_code
     paths

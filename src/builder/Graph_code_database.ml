@@ -126,7 +126,7 @@ let db_of_graph_code (root : Fpath.t) g =
   (* MultiDirs entities? they are done by codemap on the fly *)
   {
     Database_code.root = !!root;
-    files = Common2_.hkeys hfiles |> List.map (fun file -> (file, 0));
-    dirs = Common2_.hkeys hdirs |> List.map (fun dir -> (dir, 1));
+    files = Common2.hkeys hfiles |> List.map (fun file -> (file, 0));
+    dirs = Common2.hkeys hdirs |> List.map (fun dir -> (dir, 1));
     entities = arr;
   }

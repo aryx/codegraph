@@ -33,7 +33,7 @@ module G = Graph_code
 (* Helpers *)
 (*****************************************************************************)
 let kind_of_rank ~max_total n =
-  let percent = if max_total =|= 0 then 0 else Common2_.pourcent n max_total in
+  let percent = if max_total =|= 0 then 0 else Common2.pourcent n max_total in
   let percent_round = Stdlib.(percent / 10 * 10) in
   spf "cover %d%%" percent_round
 
