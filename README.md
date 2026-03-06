@@ -15,7 +15,8 @@ of dependencies when looked at globally. Codegraph helps you understand
 and improve that structure.
 
 A great introduction to DSM for improving a codebase:
-http://codebetter.com/patricksmacchia/2009/08/24/identify-code-structure-patterns-at-a-glance/
+https://blog.ndepend.com/identify-net-code-structure-patterns-with-no-effort/
+<!-- old link: http://codebetter.com/patricksmacchia/2009/08/24/identify-code-structure-patterns-at-a-glance/ -->
 
 ### Related tools
 
