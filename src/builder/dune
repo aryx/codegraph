@@ -41,7 +41,7 @@
     pfff-lang_GENERIC_parsing
 
     ; from semgrep-pfff-langs
-    pfff_lang_GENERIC_naming
+    naming_generic
 
     ; in codegraph now!
     pfff-lang_GENERIC_linking
