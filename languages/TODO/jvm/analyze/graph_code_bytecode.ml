@@ -405,7 +405,7 @@ let extract_uses_inheritance2 ~g ast =
   let current = (name, E.Class) in
   let env = { g; current; consts = jclass.j_consts } in
 
-  let parents = Common2.option_to_list jclass.j_super @ jclass.j_interfaces in
+  let parents = Option.to_list jclass.j_super @ jclass.j_interfaces in
   parents |> List.iter (fun cname ->
     let node = (JBasics.cn_name cname, E.Class) in
     add_use_edge env node;
