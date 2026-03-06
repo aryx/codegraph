@@ -9,7 +9,7 @@
    commons
    parsing_core
    graph_code
-   visualization
+   color geometry
    gui
  )
  (preprocess (pps ppx_deriving.show profiling.ppx))
