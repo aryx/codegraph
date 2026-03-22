@@ -2,7 +2,68 @@
 
 * Last
 
-** Last
+
+** Last2
+
+*** RELAX move GENERIC/ to semgrep-pfff-languages/libs/ with a better name
+maybe parsers, finders, like I have highlighters? 
+
+*** ---------------------------------------
+
+*** make test in codegraph  seems to take forever
+
+*** CLAUDE codegraph: adapt to latest .cmt format! graph_code_cmt.ml,
+ast_cmt.ml
+
+*** CLAUDE integrate SCIP? reuse scip.proto? so take this for codegraph_build too?
+
+*** generate scip database from .cmt? so can be used also by semgrep -scip?
+
+
+** Last2 bis
+
+*** codegraph_build:
+
+**** the codegraph graph_code.marshall seems wrong for codemap/efuns/...
+ast_cmt.ml wrong?
+lots of dependencies are not stored in it, like languages/ is marked
+as dead, but it should be used!
+
+use syncweb_indexer to better see?
+improve codegraph/tests/cmt/*.ml ?
+
+**** codegraph_build seems to loop forever when running on xix
+after make default
+=> add Logs
+
+**** => improve the defs_and_uses.list for codemap and efuns
+and so Visual.pdf and Editor.pdf
+
+**** => try on semgrep-libs and see deps to Lang.ml and typing/ and
+try to move things around so codemap does not depend on semgrep package
+
+*** RELAX remove the pfff-lang-xxx.opam at the codegraph project root
+
+*** try .codegraphignore in codegraph_build so don't need rm -rf _build/.../mk/tests/
+just ignore it in xix
+adjust find_source.ml
+
+*** reintegrate the use of -lang java_old, -lang php_old, etc
+fix find_source.ml and maybe remove all of that and reuse
+the Find_generic.ml and rename Find_lang.ml
+or something
+
+*** reintegrate languages/TODO/jvm/
+and javalib! potentially useful for advanced TR on java
+
+*** less: use ocamlformat
+I don't use syncweb on codegraph code, so easier to reformat
+no need to care about syncweb special comments
+and make sure make sync still works
+
+
+
+** Last1
 
 *** update codegraph to OCaml 5.1 AST?
 
