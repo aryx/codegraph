@@ -90,7 +90,6 @@ still weird display bug on macOS?
 
 *** port to the web? use Dream?
 
-
 *** experiment with JsOfOCairo??
 or use directly Canvas? Worth factorizing code?
 
@@ -101,3 +100,4 @@ or use directly Canvas? Worth factorizing code?
 
 *** OPAM package, people want to install it
 #but depends on semgrep libs and codemap libs so need first to package those
+#update: or use submodule semgrep-pfff-xxx! so easier

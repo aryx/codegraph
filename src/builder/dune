@@ -34,14 +34,10 @@
     parser_lisp.graph
 
     ; from semgrep-pfff-langs
-    layer_code
-
-    ; in lang_GENERIC/
-    pfff-lang_GENERIC_finding
-    pfff-lang_GENERIC_parsing
-
-    ; from semgrep-pfff-langs
+    finding_generic
+    parsing_generic
     naming_generic
+    layer_code
 
     ; in codegraph now!
     pfff-lang_GENERIC_linking
