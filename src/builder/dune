@@ -21,7 +21,6 @@
     parser_cmt.finder
     parser_php.ast
     parser_cpp.ast
-    ;TODO parser_c.ast
     parser_lisp.ast
 
     ; for codegraph_build, in semgrep-pfff-langs/languages/<lang>/graph/
@@ -29,7 +28,7 @@
     parser_javascript.graph ; Stdlib_js
     parser_ocaml.graph
     parser_cpp.menhir ; Parse_cpp.init_defs
-    ;TODO parser_c.graph
+    parser_c.graph
     parser_php.graph
     parser_lisp.graph
 

@@ -57,8 +57,10 @@ let mk_filter_file (root : Fpath.t) : (Fpath.t -> bool) =
   let gitignore_filter =
     Gitignore_filter.create
       ~gitignore_filenames:[
-      Gitignore.{source_kind = "gitignore"; filename = ".gitignore"; format = Gitignore };
-      Gitignore.{source_kind = "codegraphignore"; filename = ".codegraphignore"; format = Gitignore };
+      Gitignore.{source_kind = "gitignore"; filename = ".gitignore"; 
+                 format = Gitignore };
+      Gitignore.{source_kind = "codegraphignore"; filename = ".codegraphignore";
+                 format = Gitignore };
       ]
     ~project_root:root ()
   in
@@ -126,15 +128,16 @@ let main_action xs =
         let files = Find_source.files_of_root ~lang:"ml" root in
         Graph_code_ml.build ~verbose:!verbose root files, empty
     | "c_old" -> 
-        let _files = Find_source.files_of_root ~lang:"c" root in
-        Parse_cpp.init_defs !Flag_parsing_cpp.macros_h;
-        let local = Filename.concat !!root "pfff_macros.h" in
+        let files = 
+           Find_generic.files_of_root ~filter_file:(mk_filter_file root)
+              Lang.C root in
+        (* Parse_cpp.init_defs !Flag_parsing_cpp.macros_h; *)
+        let local = Filename.concat !!root "../../pfff_macros.h" in
         if Sys.file_exists local
         then Parse_cpp.add_defs (Fpath.v local);
-        failwith "TODO: Graph_code_c.build"
-(*
-        Graph_code_c.build ~verbose:!verbose root files, empty
-*)
+
+        Graph_code_c.build root files, empty
+
     | "java_old" -> 
         let files = Find_source.files_of_root ~lang:"java" root in
         Graph_code_java.build ~verbose:!verbose root files, empty
