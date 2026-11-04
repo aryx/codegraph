@@ -1,6 +1,32 @@
-#-*- org -*-
+* Big plan 
+
+** TODO changes.txt
+#CLAUDE: release on opam! 
+# fix OCaml experience with cmt and dupes and missing, and (wrapped true/false) of dune
+# start use LSIF/SCIP, generate atdgen spec from scip.proto (like martin did, but need redo cos was not free)
+# extend codegraph to 3rd party dep and SCA!
+
+*** release on OPAM, even more important in AI era to focus on understanding code globally
+
+
+** Later
+
 
 * Last
+
+** Last3
+
+*** add .codegraphignore for codegraph_build and syncweb_indexer
+and also add syncweb_indexer -verbose
+
+*** RELAX use CLI_builder.ml instead of main.ml in codegraph/
+
+*** less: merge compiled/finder/ with finding/
+
+*** less: move also codegraph GENERIC linking in semgrep-pfff-langs/linking/ maybe
+so can be reused  by syncweb_indexer?
+
+*** Resume codegraph and start use SCIP indexers
 
 
 ** Last2
