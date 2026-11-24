@@ -7,7 +7,7 @@
     compiler-libs ;; for lang_cmt 
     compiler-libs.common
 
-    commons profiling
+    commons profiling caps
     parsing_core
     graph_code
     paths

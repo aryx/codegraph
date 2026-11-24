@@ -82,8 +82,8 @@ let mk_filter_file (root : Fpath.t) : (Fpath.t -> bool) =
 (*****************************************************************************)
 (* Building stdlib *)
 (*****************************************************************************)
-let build_stdlib lang (root : Fpath.t) dst =
-  let files = Find_source.files_of_root ~lang root in
+let build_stdlib (caps : < Cap.readdir; .. >) lang (root : Fpath.t) dst =
+  let files = Find_source.files_of_root caps ~lang root in
   match lang with
   | "java" ->
      Builtins_java.extract_from_sources ~src:root ~dst files
@@ -95,7 +95,7 @@ let build_stdlib lang (root : Fpath.t) dst =
 (* Main action, building the graph *)
 (*****************************************************************************)
 
-let main_action xs =
+let main_action (caps : < Cap.readdir; .. >) xs =
 
   (* codegraph_build was more flexible in allowing to pass
    * multiple dirs, but this can be done with a skip_list anyway.
@@ -114,7 +114,7 @@ let main_action xs =
     try (
     match Lang.of_string_opt !lang_str with
     | Some lang -> 
-         let files = Find_generic.files_of_root ~filter_file:(mk_filter_file root) lang root in
+         let files = Find_generic.files_of_root caps ~filter_file:(mk_filter_file root) lang root in
          let xs = files |> List.map (fun (file : Fpath.t) ->
             Logs.info (fun m -> m "parsing %s" !!file);
             !!file, Parse_generic.parse_and_resolve_name lang file) 
@@ -125,11 +125,11 @@ let main_action xs =
     | None ->
        (match !lang_str with
     | "ml_old"  -> 
-        let files = Find_source.files_of_root ~lang:"ml" root in
+        let files = Find_source.files_of_root caps ~lang:"ml" root in
         Graph_code_ml.build ~verbose:!verbose root files, empty
     | "c_old" -> 
         let files = 
-           Find_generic.files_of_root ~filter_file:(mk_filter_file root)
+           Find_generic.files_of_root caps ~filter_file:(mk_filter_file root)
               Lang.C root in
         (* Parse_cpp.init_defs !Flag_parsing_cpp.macros_h; *)
         let local = Filename.concat !!root "../../pfff_macros.h" in
@@ -139,10 +139,10 @@ let main_action xs =
         Graph_code_c.build root files, empty
 
     | "java_old" -> 
-        let files = Find_source.files_of_root ~lang:"java" root in
+        let files = Find_source.files_of_root caps ~lang:"java" root in
         Graph_code_java.build ~verbose:!verbose root files, empty
     | "php_old" -> 
-        let files = Find_source.files_of_root ~lang:"php" root in
+        let files = Find_source.files_of_root caps ~lang:"php" root in
 (* TODO delete
       (* todo: better factorize *)
       let skip_file = Filename.concat !!root "skip_list.txt" in
@@ -160,19 +160,19 @@ let main_action xs =
         ~class_analysis:!class_analysis
         root files
     | "js_old" -> 
-        let files = Find_source.files_of_root ~lang:"js" root in
+        let files = Find_source.files_of_root caps ~lang:"js" root in
         Graph_code_js.build ~verbose:!verbose root files, empty
 
     | "lisp" -> 
-        let files = Find_source.files_of_root ~lang:"lisp" root in
+        let files = Find_source.files_of_root caps ~lang:"lisp" root in
         Graph_code_lisp.build root files, empty
     | "dot" -> 
          Graph_code.graph_of_dotfile (root / "graph.dot"), empty
 
 (*#if FEATURE_CMT*)
     | "cmt"  -> 
-          let ml_files = Find_source.files_of_root ~lang:"ml" root in
-          let cmt_files = Find_source.files_of_root ~lang:"cmt" root in
+          let ml_files = Find_source.files_of_root caps ~lang:"ml" root in
+          let cmt_files = Find_source.files_of_root caps ~lang:"cmt" root in
           Graph_code_cmt.build root ~cmt_files ~ml_files, 
           empty
 (*#endif*)
@@ -415,7 +415,7 @@ let test_dotfile_of_dotdepend file =
 
 
 (* ---------------------------------------------------------------------- *)
-let extra_actions () = [
+let extra_actions (caps : < Cap.readdir; .. >) = [
 
   "-to_json", " <graph file>", 
   Arg_.mk_action_1_arg (fun file ->
@@ -428,7 +428,7 @@ let extra_actions () = [
   );
 
   "-build_stdlib", " <src> <dst>",
-  Arg_.mk_action_2_arg (fun dir dst -> build_stdlib !lang_str (Fpath.v dir) dst);
+  Arg_.mk_action_2_arg (fun dir dst -> build_stdlib caps !lang_str (Fpath.v dir) dst);
   "-adjust_graph", " <graph> <adjust_file> <whitelist> <dstfile>\n",
   Arg_.mk_action_4_arg (fun graph file file2 dst -> 
     adjust_graph graph file file2 dst);
@@ -461,12 +461,12 @@ let extra_actions () = [
 (* The options *)
 (*****************************************************************************)
 
-let all_actions () = 
-  extra_actions () @
+let all_actions caps = 
+  extra_actions caps @
   Test_parsing_cmt.actions () @
   []
 
-let options () = [
+let options caps = [
   "-lang", Arg.Set_string lang_str, 
   (spf " <str> choose language (default = %s) " !lang_str);
   "-o", Arg.String (fun s -> output_dir := Some s), 
@@ -483,7 +483,7 @@ let options () = [
   "-no_fake_node", Arg.Clear Graph_code_php.add_fake_node_when_undefined_entity,
   " no fake nodes when use-def mismatches\n";
   ] @
-  Arg_.options_of_actions action (all_actions()) @
+  Arg_.options_of_actions action (all_actions caps) @
   Common2.cmdline_flags_devel () @
   [
   "-verbose", Arg.Unit (fun () ->
@@ -507,7 +507,7 @@ let options () = [
 (* Main entry point *)
 (*****************************************************************************)
 
-let main () = 
+let main (caps : < Cap.readdir; .. >) = 
   let usage_msg = 
     spf "Usage: %s [options] -lang <lang> <dir> \nDoc: %s\nOptions:"
       (Filename.basename Sys.argv.(0))
@@ -515,7 +515,7 @@ let main () =
   in
 
   (* does side effect on many global flags *)
-  let args = Arg_.parse_options (options()) usage_msg Sys.argv in
+  let args = Arg_.parse_options (options caps) usage_msg Sys.argv in
 
   (* alt: use cmdliner and parse --debug, --info ... *)
   Logs_.setup ~level:!log_level ();
@@ -528,8 +528,8 @@ let main () =
     (* --------------------------------------------------------- *)
     (* actions, useful to debug subpart *)
     (* --------------------------------------------------------- *)
-    | xs when List.mem !action (Arg_.action_list (all_actions())) -> 
-        Arg_.do_action !action xs (all_actions())
+    | xs when List.mem !action (Arg_.action_list (all_actions caps)) -> 
+        Arg_.do_action !action xs (all_actions caps)
 
     | _ when not (String_.empty !action) -> 
         failwith ("unrecognized action or wrong params: " ^ !action)
@@ -538,18 +538,19 @@ let main () =
     (* main entry *)
     (* --------------------------------------------------------- *)
     | x::xs -> 
-        main_action (x::xs)
+        main_action caps (x::xs)
 
     (* --------------------------------------------------------- *)
     (* empty entry *)
     (* --------------------------------------------------------- *)
     | [] -> 
-        Arg_.usage usage_msg (options())
+        Arg_.usage usage_msg (options caps)
     )
   )
 
 (*****************************************************************************)
 let _ =
+  Cap.main (fun caps ->
   UCommon.main_boilerplate (fun () -> 
-    main ();
-  )
+    main caps;
+  ))
